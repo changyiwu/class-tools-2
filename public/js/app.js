@@ -129,6 +129,11 @@ const STORAGE_KEYS = {
 
 const DEFAULT_CLASSES = [
   {
+    id: 'class_universal',
+    name: '通用班級',
+    students: Array.from({ length: 30 }, (_, i) => `${i + 1}號`)
+  },
+  {
     id: 'class_1',
     name: '三年一班 (範例)',
     students: [
@@ -143,7 +148,7 @@ const DEFAULT_CLASSES = [
     name: '三年二班 (範例)',
     students: [
       '陳大為', '林冠宇', '張雨軒', '李芷葳', '黃柏睿',
-      '曾子晴', '許哲維', '徐若瑄', '江宏傑', '福原愛',
+      '曾子晴', '徐哲維', '徐若瑄', '江宏傑', '福原愛',
       '王力宏', '陶喆', '周華健', '張惠妹', '五月天'
     ]
   }
@@ -163,6 +168,18 @@ function initLocalStorageData() {
   if (!Array.isArray(appState.classes) || appState.classes.length === 0) {
     appState.classes = DEFAULT_CLASSES;
     localStorage.setItem(STORAGE_KEYS.CLASSES, JSON.stringify(DEFAULT_CLASSES));
+  } else {
+    // Migration: 確保「通用班級」(1-30 號) 存在於現有的 LocalStorage 列表中
+    const hasUniversal = appState.classes.some(c => c.id === 'class_universal' || c.name === '通用班級');
+    if (!hasUniversal) {
+      const universalClass = {
+        id: 'class_universal',
+        name: '通用班級',
+        students: Array.from({ length: 30 }, (_, i) => `${i + 1}號`)
+      };
+      appState.classes.unshift(universalClass);
+      localStorage.setItem(STORAGE_KEYS.CLASSES, JSON.stringify(appState.classes));
+    }
   }
   
   // 2. Active Class ID
