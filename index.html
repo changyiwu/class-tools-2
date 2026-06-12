@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClassHub | 班級抽籤與多元工具箱</title>
+  <!-- FontAwesome for Premium Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Core Design Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+  <!-- Canvas Confetti CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+  <!-- Background Glow Effects -->
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+  
+  <!-- Noise Alarm Warning Border overlay -->
+  <div id="noise-warning" class="noise-warning-overlay"></div>
+
+  <!-- Left Sidebar Navigation -->
+  <aside id="sidebar">
+    <div class="brand">
+      <div class="brand-logo">C</div>
+      <span class="brand-name">ClassHub</span>
+    </div>
+    
+    <ul class="nav-links">
+      <li class="nav-item active" data-view="raffle">
+        <a onclick="switchView('raffle')">
+          <i class="fa-solid fa-dice"></i>
+          <span>幸運大抽籤</span>
+        </a>
+      </li>
+      <li class="nav-item" data-view="noise">
+        <a onclick="switchView('noise')">
+          <i class="fa-solid fa-volume-high"></i>
+          <span>噪音監測器</span>
+        </a>
+      </li>
+      <li class="nav-item" data-view="groups">
+        <a onclick="switchView('groups')">
+          <i class="fa-solid fa-users"></i>
+          <span>隨機分組</span>
+        </a>
+      </li>
+      <li class="nav-item" data-view="seating">
+        <a onclick="switchView('seating')">
+          <i class="fa-solid fa-chair"></i>
+          <span>隨機座位表</span>
+        </a>
+      </li>
+      <li class="nav-item" data-view="timer">
+        <a onclick="switchView('timer')">
+          <i class="fa-solid fa-stopwatch"></i>
+          <span>計時器與碼表</span>
+        </a>
+      </li>
+      <li class="nav-item" data-view="scoreboard">
+        <a onclick="switchView('scoreboard')">
+          <i class="fa-solid fa-star"></i>
+          <span>團隊計分板</span>
+        </a>
+      </li>
+      <li class="nav-item" data-view="manager" style="margin-top: auto; border-top: 1px solid var(--border-color); padding-top: 10px;">
+        <a onclick="switchView('manager')">
+          <i class="fa-solid fa-list-check"></i>
+          <span>名單與設定</span>
+        </a>
+      </li>
+    </ul>
+    
+    <div class="sidebar-footer">
+      <p>© 2026 ClassHub Dashboard</p>
+    </div>
+  </aside>
+
+  <!-- Main Workspace -->
+  <main>
+    <header>
+      <div style="display: flex; align-items: center; gap: 16px;">
+        <!-- Mobile Toggle Hamburger -->
+        <div class="hamburger" id="hamburger-toggle" onclick="toggleSidebar()">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+        <div class="header-title">
+          <h1 id="current-view-title">幸運大抽籤</h1>
+        </div>
+      </div>
+      
+      <div class="header-controls">
+        <!-- Class Selector -->
+        <div class="select-wrapper">
+          <select id="header-class-select" onchange="changeActiveGlobalClass(this.value)">
+            <!-- Populated dynamically -->
+          </select>
+        </div>
+        <!-- Sound Enable Toggle -->
+        <button id="sound-toggle-btn" class="btn btn-icon" onclick="toggleGlobalSound()" title="切換音效">
+          <i class="fa-solid fa-volume-high"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Content Panels -->
+    
+    <!-- 🎯 1. Lucky Raffle Panel -->
+    <div id="view-raffle" class="container active">
+      <div class="raffle-layout">
+        <!-- Main Raffle Area -->
+        <div class="glass-card" style="display: flex; flex-direction: column;">
+          <div class="raffle-header-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div class="raffle-modes">
+              <button class="raffle-mode-btn active" data-mode="wheel" onclick="setRaffleMode('wheel')">
+                <i class="fa-solid fa-circle-dot"></i> 幸運大轉盤
+              </button>
+              <button class="raffle-mode-btn" data-mode="slot" onclick="setRaffleMode('slot')">
+                <i class="fa-solid fa-square-poll-vertical"></i> 滾動拉霸機
+              </button>
+              <button class="raffle-mode-btn" data-mode="cards" onclick="setRaffleMode('cards')">
+                <i class="fa-solid fa-address-card"></i> 神秘翻牌
+              </button>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 16px;">
+              <label style="font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
+                <input type="checkbox" id="raffle-exclude-checkbox" style="accent-color: var(--accent-secondary);">
+                <span>不重複抽籤 (排除已中)</span>
+              </label>
+            </div>
+          </div>
+          
+          <!-- Drawing Arena -->
+          <div class="raffle-display-box">
+            <!-- 1. Wheel Arena -->
+            <div id="arena-wheel" class="wheel-container">
+              <div class="wheel-pointer"></div>
+              <canvas id="wheel-canvas" width="400" height="400"></canvas>
+            </div>
+            
+            <!-- 2. Slot Arena -->
+            <div id="arena-slot" class="slot-container" style="display: none;">
+              <div class="slot-wrapper-list" id="slot-wrapper">
+                <!-- Populated dynamically -->
+              </div>
+            </div>
+            
+            <!-- 3. Cards Arena -->
+            <div id="arena-cards" class="cards-container" style="display: none;">
+              <!-- Populated dynamically -->
+            </div>
+            
+            <!-- Winner Modal Display -->
+            <div id="winner-display" class="winner-overlay" style="display: none;">
+              <div class="winner-title">🎉 恭喜中籤者 🎉</div>
+              <div class="winner-name" id="winner-name-lbl">張三</div>
+              <button class="btn btn-primary" onclick="closeWinnerOverlay()">確認</button>
+            </div>
+          </div>
+          
+          <div style="display: flex; justify-content: center; gap: 16px;">
+            <button id="btn-spin" class="btn btn-primary" style="padding: 14px 40px; font-size: 16px;" onclick="startRaffleDraw()">
+              <i class="fa-solid fa-play"></i> 開始抽籤
+            </button>
+            <button id="btn-reset-pool" class="btn" onclick="resetRafflePool()">
+              <i class="fa-solid fa-rotate-left"></i> 重置抽籤名單
+            </button>
+          </div>
+        </div>
+        
+        <!-- History Sidebar -->
+        <div class="glass-card history-card">
+          <div class="history-header">
+            <h3 style="font-family: var(--font-accent); font-weight: 700;"><i class="fa-solid fa-clock-rotate-left" style="color: var(--accent-primary);"></i> 抽籤歷史</h3>
+            <button class="btn" style="padding: 6px 12px; font-size: 12px;" onclick="clearRaffleHistory()">清空</button>
+          </div>
+          <div class="history-list" id="raffle-history-list">
+            <!-- Empty state -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 🔊 2. Noise Monitor Panel -->
+    <div id="view-noise" class="container">
+      <div class="noise-layout">
+        <!-- Noise Visual Meter -->
+        <div class="glass-card noise-meter-display">
+          <h3 style="margin-bottom: 20px; font-family: var(--font-accent);"><i class="fa-solid fa-gauge-high" style="color: var(--accent-secondary)"></i> 即時環境分貝</h3>
+          <div class="gauge-container">
+            <canvas id="noise-gauge-canvas" class="gauge-canvas" width="280" height="280"></canvas>
+            <div class="decibel-value">
+              <span id="noise-decibel-num" class="decibel-num">0</span>
+              <span class="decibel-unit">dB</span>
+            </div>
+          </div>
+          
+          <div style="display: flex; gap: 16px;">
+            <button id="btn-noise-start" class="btn btn-success" onclick="startNoiseMonitor()">
+              <i class="fa-solid fa-microphone"></i> 啟用噪音計
+            </button>
+            <button id="btn-noise-stop" class="btn btn-danger" onclick="stopNoiseMonitor()" disabled>
+              <i class="fa-solid fa-microphone-slash"></i> 停用噪音計
+            </button>
+          </div>
+        </div>
+        
+        <!-- Settings Panel -->
+        <div class="glass-card noise-settings">
+          <h3 style="font-family: var(--font-accent); border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+            <i class="fa-solid fa-sliders" style="color: var(--accent-primary)"></i> 監測設定
+          </h3>
+          
+          <div class="setting-group">
+            <div class="setting-label-row">
+              <span>噪音閾值 (臨界點)</span>
+              <span><span id="threshold-val">65</span> dB</span>
+            </div>
+            <input type="range" id="noise-threshold-slider" min="40" max="100" value="65" oninput="updateNoiseThreshold(this.value)">
+            <p style="font-size: 11px; color: var(--text-muted);">當環境音量超過此設定值時，系統將視為「噪音過大」。</p>
+          </div>
+          
+          <div class="setting-group">
+            <div class="setting-label-row">
+              <span>警示延遲時間</span>
+              <span><span id="delay-val">3</span> 秒</span>
+            </div>
+            <input type="range" id="noise-delay-slider" min="1" max="10" value="3" oninput="updateNoiseDelay(this.value)">
+            <p style="font-size: 11px; color: var(--text-muted);">音量連續超標幾秒後，才會觸發全螢幕紅色警示。</p>
+          </div>
+          
+          <div class="noise-indicator">
+            <div id="noise-indicator-light" class="indicator-light"></div>
+            <span id="noise-status-text">麥克風未啟用</span>
+          </div>
+
+          <div style="font-size: 12px; color: var(--text-muted); line-height: 1.6;">
+            <strong>💡 靜音自律小技巧：</strong><br>
+            當班級進行自主討論或自習時，可將此頁投放在黑板/大螢幕上。超過臨界點時螢幕會閃爍紅色框警示，幫助班級學童自我調節音量。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 👥 3. Group Generator Panel -->
+    <div id="view-groups" class="container">
+      <div class="glass-card" style="margin-bottom: 24px;">
+        <div class="groups-controls">
+          <div class="setting-group" style="flex: 1; min-width: 180px;">
+            <span style="font-size: 14px; font-weight: 500; margin-bottom: 6px; display: block;">分組模式</span>
+            <div class="select-wrapper">
+              <select id="group-mode-select" onchange="toggleGroupInputLabel(this.value)">
+                <option value="count">自訂組數 (例如：分成 4 組)</option>
+                <option value="size">自訂每組人數 (例如：每組 5 人)</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="setting-group" style="width: 120px;">
+            <span id="group-input-label" style="font-size: 14px; font-weight: 500; margin-bottom: 6px; display: block;">分組組數</span>
+            <input type="number" id="group-target-num" class="input-field" value="4" min="1" style="padding: 10px 16px;">
+          </div>
+          
+          <div style="display: flex; gap: 12px;">
+            <button class="btn btn-primary" style="padding: 11px 24px;" onclick="generateRandomGroups()">
+              <i class="fa-solid fa-users-viewfinder"></i> 開始隨機分組
+            </button>
+          </div>
+        </div>
+        
+        <!-- Generated Groups Output Grid -->
+        <div class="groups-grid" id="groups-grid-container">
+          <!-- Populated dynamically -->
+          <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">
+            <i class="fa-solid fa-users" style="font-size: 48px; margin-bottom: 16px; opacity: 0.3;"></i>
+            <p>請點擊「開始隨機分組」產生小組名單。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 🪑 4. Seating Chart Panel -->
+    <div id="view-seating" class="container">
+      <div class="seating-layout">
+        <!-- Left Seating Grid -->
+        <div class="glass-card seating-workspace">
+          <div class="classroom-stage">講台 (黑板位置)</div>
+          
+          <div class="seating-grid" id="classroom-seating-grid">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+        
+        <!-- Right Sidebar Controls -->
+        <div class="seating-sidebar">
+          <div class="glass-card">
+            <h3 style="font-family: var(--font-accent); margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+              <i class="fa-solid fa-gears" style="color: var(--accent-secondary)"></i> 排版設定
+            </h3>
+            
+            <div class="setting-group" style="margin-bottom: 16px;">
+              <div class="setting-label-row">
+                <span>教室座位橫排 (Rows)</span>
+                <span><span id="seat-rows-val">5</span> 排</span>
+              </div>
+              <input type="range" id="seat-rows-slider" min="1" max="10" value="5" oninput="updateSeatingGridSize()">
+            </div>
+            
+            <div class="setting-group" style="margin-bottom: 24px;">
+              <div class="setting-label-row">
+                <span>教室座位直列 (Columns)</span>
+                <span><span id="seat-cols-val">6</span> 列</span>
+              </div>
+              <input type="range" id="seat-cols-slider" min="1" max="10" value="6" oninput="updateSeatingGridSize()">
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <button class="btn btn-primary" onclick="randomizeSeatingChart()">
+                <i class="fa-solid fa-shuffle"></i> 隨機大風吹
+              </button>
+              <button class="btn" onclick="clearSeatingArrangement()">
+                <i class="fa-solid fa-eraser"></i> 清空座位表
+              </button>
+              <button class="btn" onclick="printSeatingChart()">
+                <i class="fa-solid fa-print"></i> 列印座位表
+              </button>
+            </div>
+            
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 16px; line-height: 1.5;">
+              * 點擊座位格子可切換為：<strong>一般座位</strong>、<strong>空位</strong>。<br>
+              * 未被分配座位的學生將會列在下方的「待排座名單」。
+            </div>
+          </div>
+          
+          <!-- Unassigned Students Container -->
+          <div class="glass-card unassigned-card">
+            <h4 style="font-family: var(--font-accent); margin-bottom: 10px;">待排座名單 (<span id="unassigned-count">0</span>)</h4>
+            <div class="unassigned-list" id="unassigned-students-list">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ⏱️ 5. Timer & Stopwatch Panel -->
+    <div id="view-timer" class="container">
+      <div class="timer-modes">
+        <button id="timer-tab-countdown" class="raffle-mode-btn active" onclick="setTimerTab('countdown')">
+          <i class="fa-solid fa-hourglass-half"></i> 倒數計時器
+        </button>
+        <button id="timer-tab-stopwatch" class="raffle-mode-btn" onclick="setTimerTab('stopwatch')">
+          <i class="fa-solid fa-stopwatch"></i> 跑秒碼表
+        </button>
+      </div>
+
+      <!-- countdown card -->
+      <div id="countdown-card" class="glass-card timer-display-card">
+        <div class="timer-countdown-wheel">
+          <svg class="timer-svg" viewBox="0 0 260 260">
+            <circle class="timer-circle-bg" cx="130" cy="130" r="120"></circle>
+            <circle id="timer-progress-ring" class="timer-circle-progress" cx="130" cy="130" r="120"></circle>
+          </svg>
+          <div id="timer-digits-lbl" class="timer-digits">10:00</div>
+        </div>
+
+        <div class="timer-controls">
+          <button id="btn-timer-play" class="btn btn-primary btn-icon" onclick="startTimer()" title="開始">
+            <i class="fa-solid fa-play"></i>
+          </button>
+          <button id="btn-timer-pause" class="btn btn-icon" onclick="pauseTimer()" style="display: none;" title="暫停">
+            <i class="fa-solid fa-pause"></i>
+          </button>
+          <button class="btn btn-icon" onclick="resetTimer()" title="重設">
+            <i class="fa-solid fa-arrow-rotate-left"></i>
+          </button>
+        </div>
+
+        <!-- presets -->
+        <div class="timer-presets">
+          <button class="preset-btn" onclick="setPresetTimer(60)">1 分鐘</button>
+          <button class="preset-btn" onclick="setPresetTimer(180)">3 分鐘</button>
+          <button class="preset-btn" onclick="setPresetTimer(300)">5 分鐘</button>
+          <button class="preset-btn" onclick="setPresetTimer(600)">10 分鐘</button>
+          <button class="preset-btn" onclick="setPresetTimer(900)">15 分鐘</button>
+          <button class="preset-btn" onclick="setPresetTimer(1200)">20 分鐘</button>
+          <button class="preset-btn" onclick="promptCustomTimer()">自訂時間...</button>
+        </div>
+      </div>
+
+      <!-- stopwatch card -->
+      <div id="stopwatch-card" class="glass-card timer-display-card" style="display: none;">
+        <div id="stopwatch-digits-lbl" class="stopwatch-digits">00:00.00</div>
+        
+        <div class="timer-controls">
+          <button id="btn-stopwatch-play" class="btn btn-primary btn-icon" onclick="startStopwatch()" title="計時">
+            <i class="fa-solid fa-play"></i>
+          </button>
+          <button id="btn-stopwatch-pause" class="btn btn-icon" onclick="pauseStopwatch()" style="display: none;" title="暫停">
+            <i class="fa-solid fa-pause"></i>
+          </button>
+          <button class="btn btn-icon" onclick="recordStopwatchLap()" title="單圈">
+            <i class="fa-solid fa-flag"></i>
+          </button>
+          <button class="btn btn-icon" onclick="resetStopwatch()" title="重設">
+            <i class="fa-solid fa-arrow-rotate-left"></i>
+          </button>
+        </div>
+
+        <div class="lap-list-container">
+          <div id="stopwatch-lap-list">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 💯 6. Scoreboard Panel -->
+    <div id="view-scoreboard" class="container">
+      <div class="glass-card">
+        <div class="scoreboard-controls-top">
+          <h3 style="font-family: var(--font-accent);"><i class="fa-solid fa-trophy" style="color: var(--accent-warning);"></i> 班級小組記分板</h3>
+          <div style="display: flex; gap: 12px;">
+            <button class="btn btn-primary" onclick="addNewScoreboardTeam()">
+              <i class="fa-solid fa-plus"></i> 新增小組
+            </button>
+            <button class="btn" onclick="resetAllScores()">
+              <i class="fa-solid fa-rotate-left"></i> 重置所有分數
+            </button>
+          </div>
+        </div>
+
+        <!-- Grid of scoreboard teams -->
+        <div class="scoreboard-grid" id="scoreboard-grid-container">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 📁 7. Student Manager Panel -->
+    <div id="view-manager" class="container">
+      <div class="manager-layout">
+        <!-- Class list navigation -->
+        <div class="glass-card class-lists-card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 style="font-family: var(--font-accent); font-weight: 700;">班級名單列表</h3>
+            <button class="btn" style="padding: 6px 12px; font-size: 12px;" onclick="createNewClassList()">新增</button>
+          </div>
+          
+          <div class="class-list-items" id="manager-class-list-container">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+
+        <!-- Class list editor -->
+        <div class="glass-card class-editor-card">
+          <h3 id="editor-title-lbl" style="font-family: var(--font-accent); margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+            編輯班級名單
+          </h3>
+          
+          <div class="editor-form">
+            <div class="setting-group">
+              <label style="font-size: 14px; font-weight: 600;">班級名稱</label>
+              <input type="text" id="edit-class-name-input" class="input-field" placeholder="例如：三年一班">
+            </div>
+            
+            <div class="setting-group">
+              <label style="font-size: 14px; font-weight: 600;">學生名單 (每行名字為一個學生)</label>
+              <textarea id="edit-class-students-textarea" class="input-field" placeholder="請在此輸入名字，例如：&#10;林小明&#10;陳華華&#10;黃大同"></textarea>
+            </div>
+            
+            <div class="editor-buttons">
+              <button class="btn" onclick="restoreActiveEditorInfo()">取消變更</button>
+              <button class="btn btn-primary" onclick="saveClassListEdits()">儲存名單</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Custom Alert Modal Dialog -->
+  <div id="alert-modal" class="custom-modal">
+    <div class="modal-content">
+      <div id="alert-modal-header" class="modal-header">提示</div>
+      <div id="alert-modal-body" class="modal-body">內容</div>
+      <div class="modal-footer">
+        <button id="alert-modal-cancel-btn" class="btn" onclick="closeAlertModal(false)">取消</button>
+        <button id="alert-modal-ok-btn" class="btn btn-primary" onclick="closeAlertModal(true)">確定</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript Modules -->
+  <script src="js/app.js"></script>
+  <script src="js/raffle.js"></script>
+  <script src="js/noise.js"></script>
+  <script src="js/groups.js"></script>
+  <script src="js/seating.js"></script>
+  <script src="js/timer.js"></script>
+  <script src="js/scoreboard.js"></script>
+  <script src="js/manager.js"></script>
+</body>
+</html>
