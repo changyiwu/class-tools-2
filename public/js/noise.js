@@ -147,8 +147,13 @@ async function startNoiseMonitor() {
     noiseLoop();
   } catch (err) {
     console.error("Microphone capture failed: ", err);
-    showCustomModal('啟用失敗', '無法啟用麥克風。請確認您已授予網頁麥克風存取權限。');
-    updateIndicator('red', '麥克風權限被拒');
+    // 釋放可能已被獲取但後續管線建立失敗的麥克風串流
+    if (noiseState.stream) {
+      noiseState.stream.getTracks().forEach(track => track.stop());
+      noiseState.stream = null;
+    }
+    showCustomModal('啟用失敗', `無法啟用麥克風。錯誤資訊：${err.message || err}`);
+    updateIndicator('red', `麥克風啟用失敗 (${err.name || 'Error'})`);
   }
 }
 
