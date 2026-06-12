@@ -191,7 +191,10 @@ function stopNoiseMonitor() {
   document.getElementById('btn-noise-start').disabled = false;
   document.getElementById('btn-noise-stop').disabled = true;
   document.getElementById('noise-decibel-num').innerText = '0';
+  document.getElementById('noise-decibel-num').classList.remove('alarm-active');
   document.getElementById('noise-warning').classList.remove('active');
+  const meterDisplay = document.querySelector('.noise-meter-display');
+  if (meterDisplay) meterDisplay.classList.remove('alarm-active');
   
   updateIndicator('muted', '麥克風未啟用');
   drawGauge(0);
@@ -236,6 +239,8 @@ function noiseLoop() {
         noiseState.alarmActive = true;
         updateIndicator('red', '噪音過大！請安靜');
         document.getElementById('noise-warning').classList.add('active');
+        document.querySelector('.noise-meter-display').classList.add('alarm-active');
+        document.getElementById('noise-decibel-num').classList.add('alarm-active');
         
         // Play synthesized warning buzz every 1.5 seconds
         if (now - noiseState.lastAlarmPlayTime > 1500) {
@@ -255,6 +260,8 @@ function noiseLoop() {
     if (noiseState.alarmActive) {
       noiseState.alarmActive = false;
       document.getElementById('noise-warning').classList.remove('active');
+      document.querySelector('.noise-meter-display').classList.remove('alarm-active');
+      document.getElementById('noise-decibel-num').classList.remove('alarm-active');
     }
     
     updateIndicator('green', '音量正常');

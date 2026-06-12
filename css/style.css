@@ -643,6 +643,30 @@ select:focus {
   align-items: center;
   justify-content: center;
   padding: 40px;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+@keyframes alarmGlowPulse {
+  0% {
+    box-shadow: var(--shadow-glass), 0 0 10px rgba(239, 68, 68, 0.1);
+  }
+  50% {
+    box-shadow: var(--shadow-glass), 0 0 25px rgba(239, 68, 68, 0.5);
+  }
+  100% {
+    box-shadow: var(--shadow-glass), 0 0 10px rgba(239, 68, 68, 0.1);
+  }
+}
+
+@keyframes shakeCard {
+  0%, 100% { transform: scale(1) translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: scale(1.01) translateX(-3px); }
+  20%, 40%, 60%, 80% { transform: scale(1.01) translateX(3px); }
+}
+
+.noise-meter-display.alarm-active {
+  animation: alarmGlowPulse 1.5s infinite ease-in-out, shakeCard 0.5s ease-in-out 1;
+  border-color: rgba(239, 68, 68, 0.4) !important;
 }
 
 .gauge-container {
@@ -672,6 +696,18 @@ select:focus {
   font-weight: 700;
   font-family: var(--font-accent);
   color: var(--accent-secondary);
+  display: inline-block;
+  transition: color 0.3s ease;
+}
+
+@keyframes dbPulse {
+  0% { transform: scale(1); color: var(--accent-secondary); }
+  50% { transform: scale(1.25); color: var(--accent-danger); text-shadow: 0 0 15px rgba(239, 68, 68, 0.6); }
+  100% { transform: scale(1); color: var(--accent-secondary); }
+}
+
+.decibel-num.alarm-active {
+  animation: dbPulse 0.8s infinite ease-in-out;
 }
 
 .decibel-unit {
