@@ -100,6 +100,10 @@ function drawWheel() {
   
   wheelCtx.clearRect(0, 0, width, height);
   
+  const colorTextMuted = getCssVariableColor('--text-muted', '#8b9bb4');
+  const colorTextMain = getCssVariableColor('--text-main', '#f8fafc');
+  const colorAccentSecondary = getCssVariableColor('--accent-secondary', '#06b6d4');
+
   const len = raffleState.pool.length;
   if (len === 0) {
     // Empty state
@@ -111,8 +115,8 @@ function drawWheel() {
     wheelCtx.lineWidth = 2;
     wheelCtx.stroke();
     
-    wheelCtx.fillStyle = 'var(--text-muted)';
-    wheelCtx.font = '16px var(--font-primary)';
+    wheelCtx.fillStyle = colorTextMuted;
+    wheelCtx.font = '16px Outfit, sans-serif';
     wheelCtx.textAlign = 'center';
     wheelCtx.textBaseline = 'middle';
     wheelCtx.fillText('請先在設定中輸入名單', cx, cy);
@@ -140,7 +144,7 @@ function drawWheel() {
     // Draw text labels
     wheelCtx.save();
     wheelCtx.fillStyle = '#121621'; // Dark text on bright slices
-    wheelCtx.font = 'bold 15px var(--font-primary)';
+    wheelCtx.font = 'bold 15px Outfit, sans-serif';
     wheelCtx.textAlign = 'right';
     wheelCtx.textBaseline = 'middle';
     
@@ -157,12 +161,12 @@ function drawWheel() {
   wheelCtx.arc(cx, cy, 35, 0, Math.PI * 2);
   wheelCtx.fill();
   
-  wheelCtx.strokeStyle = 'var(--accent-secondary)';
+  wheelCtx.strokeStyle = colorAccentSecondary;
   wheelCtx.lineWidth = 3;
   wheelCtx.stroke();
   
   // Inner core decor
-  wheelCtx.fillStyle = 'var(--text-main)';
+  wheelCtx.fillStyle = colorTextMain;
   wheelCtx.beginPath();
   wheelCtx.arc(cx, cy, 10, 0, Math.PI * 2);
   wheelCtx.fill();

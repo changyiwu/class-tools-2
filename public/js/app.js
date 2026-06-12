@@ -324,6 +324,16 @@ function registerViewSwitchCallback(cb) {
   viewSwitchCallbacks.push(cb);
 }
 
+// Helper to get CSS Custom Property color for Canvas
+function getCssVariableColor(varName, fallbackColor) {
+  try {
+    const val = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+    return val || fallbackColor;
+  } catch (e) {
+    return fallbackColor;
+  }
+}
+
 // Initialize on document loaded
 document.addEventListener('DOMContentLoaded', () => {
   initLocalStorageData();

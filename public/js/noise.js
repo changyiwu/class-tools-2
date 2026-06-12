@@ -52,11 +52,18 @@ function drawGauge(db) {
   const endAngle = 2.2 * Math.PI;
   const totalAngleRange = endAngle - startAngle;
   
+  // Resolve Theme Colors for Canvas
+  const colorSuccess = getCssVariableColor('--accent-success', '#10b981');
+  const colorWarning = getCssVariableColor('--accent-warning', '#f59e0b');
+  const colorDanger = getCssVariableColor('--accent-danger', '#ef4444');
+  const colorTextMuted = getCssVariableColor('--text-muted', '#8b9bb4');
+  const colorTextMain = getCssVariableColor('--text-main', '#f8fafc');
+  
   // Create beautiful gradient track
   const grad = gaugeCtx.createLinearGradient(30, 0, width - 30, 0);
-  grad.addColorStop(0, 'var(--accent-success)');
-  grad.addColorStop(0.5, 'var(--accent-warning)');
-  grad.addColorStop(1, 'var(--accent-danger)');
+  grad.addColorStop(0, colorSuccess);
+  grad.addColorStop(0.5, colorWarning);
+  grad.addColorStop(1, colorDanger);
   
   gaugeCtx.strokeStyle = 'rgba(255,255,255,0.06)';
   gaugeCtx.lineWidth = 14;
@@ -75,8 +82,8 @@ function drawGauge(db) {
   gaugeCtx.stroke();
   
   // Draw tick labels (30, 50, 70, 90, 100)
-  gaugeCtx.fillStyle = 'var(--text-muted)';
-  gaugeCtx.font = '10px var(--font-primary)';
+  gaugeCtx.fillStyle = colorTextMuted;
+  gaugeCtx.font = '10px Outfit, sans-serif';
   gaugeCtx.textAlign = 'center';
   gaugeCtx.textBaseline = 'middle';
   
@@ -92,14 +99,14 @@ function drawGauge(db) {
   // Draw threshold line indicator
   const threshRatio = Math.min(Math.max((noiseState.threshold - 30) / 70, 0), 1);
   const threshAngle = startAngle + threshRatio * totalAngleRange;
-  gaugeCtx.strokeStyle = 'var(--text-main)';
+  gaugeCtx.strokeStyle = colorTextMain;
   gaugeCtx.lineWidth = 3;
   gaugeCtx.beginPath();
   gaugeCtx.arc(cx, cy, radius + 2, threshAngle - 0.01, threshAngle + 0.01);
   gaugeCtx.stroke();
   
   // Draw center hub pin
-  gaugeCtx.fillStyle = 'var(--text-main)';
+  gaugeCtx.fillStyle = colorTextMain;
   gaugeCtx.beginPath();
   gaugeCtx.arc(cx, cy, 8, 0, Math.PI * 2);
   gaugeCtx.fill();
@@ -109,7 +116,7 @@ function drawGauge(db) {
   gaugeCtx.translate(cx, cy);
   gaugeCtx.rotate(valueAngle);
   
-  gaugeCtx.strokeStyle = 'var(--text-main)';
+  gaugeCtx.strokeStyle = colorTextMain;
   gaugeCtx.lineWidth = 3;
   gaugeCtx.lineCap = 'round';
   gaugeCtx.beginPath();
