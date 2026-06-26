@@ -4,29 +4,29 @@
   --font-primary: 'Outfit', sans-serif;
   --font-accent: 'Fredoka', sans-serif;
 
-  /* Premium HSL Color Palette */
-  --bg-dark: hsl(226, 23%, 11%);
-  --bg-card: hsla(224, 25%, 16%, 0.6);
-  --bg-card-hover: hsla(224, 25%, 20%, 0.85);
-  --border-color: hsla(225, 20%, 25%, 0.4);
-  --border-glow: hsla(225, 30%, 40%, 0.6);
+  /* Premium Color Palette (Synced with teaching-web) */
+  --bg-dark: #0a081c;
+  --bg-card: rgba(255, 255, 255, 0.05);
+  --bg-card-hover: rgba(255, 255, 255, 0.1);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-glow: rgba(255, 255, 255, 0.2);
   
-  --text-main: hsl(0, 0%, 95%);
-  --text-muted: hsl(220, 15%, 70%);
-  --text-dark: hsl(226, 23%, 11%);
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-dark: #0f172a;
 
-  /* Neon Accent Colors */
-  --accent-primary: hsl(265, 85%, 65%);   /* Purple */
-  --accent-secondary: hsl(190, 90%, 50%); /* Cyan */
+  /* Neon Accent Colors (Synced with teaching-web) */
+  --accent-primary: #8b5cf6;   /* Purple */
+  --accent-secondary: #06b6d4; /* Cyan */
   --accent-success: hsl(145, 80%, 45%);   /* Green */
   --accent-warning: hsl(35, 95%, 55%);    /* Orange/Yellow */
-  --accent-danger: hsl(350, 85%, 55%);    /* Red */
+  --accent-danger: #f43f5e;    /* Red/Accent */
   
   /* Gradients */
   --grad-main: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
   --grad-success: linear-gradient(135deg, var(--accent-success), hsl(175, 85%, 45%));
   --grad-danger: linear-gradient(135deg, var(--accent-danger), hsl(320, 85%, 50%));
-  --grad-bg: radial-gradient(circle at 0% 0%, hsl(230, 30%, 15%) 0%, hsl(226, 23%, 8%) 100%);
+  --grad-bg: linear-gradient(rgba(10, 8, 28, 0.75), rgba(10, 8, 28, 0.75)), url('/background.png');
   
   /* Utility */
   --radius-sm: 8px;
@@ -53,6 +53,10 @@ body {
   font-family: var(--font-primary);
   background: var(--bg-dark);
   background-image: var(--grad-bg);
+  background-attachment: fixed;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
   color: var(--text-main);
   min-height: 100vh;
   overflow-x: hidden;
