@@ -54,7 +54,7 @@
 ## 部署流程
 
 本專案採用 GitHub Actions 進行持續部署：
-*   **分支**：`master`
+*   **分支**：`main`
 *   **目的平台**：GitHub Pages (由 GitHub 託管)
 *   **工作流定義**：`.github/workflows/deploy.yml`
-*   當推送至 `master` 時，會自動下載依賴、執行 `npm run build` 並部署 `dist/` 目錄的內容。
+*   當推送至 `main` 時，會自動下載依賴、執行 `npm run build` 並部署 `dist/` 目錄的內容。

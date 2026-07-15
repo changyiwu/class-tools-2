@@ -49,4 +49,4 @@ npm run preview
 
 ## 🚀 部署說明
 
-本專案配置有 GitHub Actions。當推送或合併至 `master` 分支時，會自動觸發並將打包產物部署至 **GitHub Pages**。
+本專案配置有 GitHub Actions。當推送或合併至 `main` 分支時，會自動觸發並將打包產物部署至 **GitHub Pages**。
