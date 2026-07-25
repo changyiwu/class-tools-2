@@ -27,7 +27,8 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v7
         with:
-          node-version: 20
+          # Node 20 已於 2026-04 結束維護；Vite 8 要求 ^20.19.0 || >=22.12.0
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
