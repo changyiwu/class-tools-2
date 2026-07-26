@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function renderManagerUI() {
   const container = document.getElementById('manager-class-list-container');
-  container.innerHTML = '';
+  container.replaceChildren();
   
   appState.classes.forEach(cls => {
     const isGlobalActive = cls.id === appState.activeClassId;
@@ -32,29 +32,59 @@ function renderManagerUI() {
     const card = document.createElement('div');
     card.className = `class-list-item-card`;
     if (isEditing) card.classList.add('active');
-    
-    // Check if delete button should be shown (must have at least 1 class remaining)
-    const showDeleteBtn = appState.classes.length > 1;
-    const deleteBtnHtml = showDeleteBtn 
-      ? `<i class="fa-solid fa-trash-can" onclick="deleteClassList('${cls.id}', event)" style="color:var(--text-muted); cursor:pointer;" title="刪除名單"></i>`
-      : '';
-      
-    const activeIndicatorHtml = isGlobalActive 
-      ? `<span style="font-size: 10px; color:var(--accent-secondary); background:hsla(190, 90%, 50%, 0.1); border: 1px solid var(--accent-secondary); padding: 2px 6px; border-radius:10px;">目前選用</span>`
-      : `<button class="btn" style="padding: 3px 8px; font-size:10px;" onclick="setGlobalActiveClassFromManager('${cls.id}', event)">選用</button>`;
-    
-    card.innerHTML = `
-      <div class="class-list-info">
-        <span class="class-list-name-txt">${cls.name}</span>
-        <span class="class-list-count">${cls.students.length} 人</span>
-      </div>
-      <div class="class-list-actions" style="display:flex; align-items:center; gap:12px;">
-        ${activeIndicatorHtml}
-        ${deleteBtnHtml}
-      </div>
-    `;
+    card.setAttribute('role', 'button');
+    card.setAttribute('tabindex', '0');
+    card.setAttribute('aria-label', `編輯${cls.name}，共 ${cls.students.length} 人`);
+
+    const info = document.createElement('div');
+    info.className = 'class-list-info';
+    const name = document.createElement('span');
+    name.className = 'class-list-name-txt';
+    name.textContent = cls.name;
+    const count = document.createElement('span');
+    count.className = 'class-list-count';
+    count.textContent = `${cls.students.length} 人`;
+    info.append(name, count);
+
+    const actions = document.createElement('div');
+    actions.className = 'class-list-actions';
+
+    if (isGlobalActive) {
+      const indicator = document.createElement('span');
+      indicator.className = 'active-class-indicator';
+      indicator.textContent = '目前選用';
+      actions.appendChild(indicator);
+    } else {
+      const selectButton = document.createElement('button');
+      selectButton.type = 'button';
+      selectButton.className = 'btn btn-compact';
+      selectButton.textContent = '選用';
+      selectButton.addEventListener('click', event => setGlobalActiveClassFromManager(cls.id, event));
+      actions.appendChild(selectButton);
+    }
+
+    if (appState.classes.length > 1) {
+      const deleteButton = document.createElement('button');
+      deleteButton.type = 'button';
+      deleteButton.className = 'icon-action-button';
+      deleteButton.setAttribute('aria-label', `刪除${cls.name}`);
+      const icon = document.createElement('i');
+      icon.className = 'fa-solid fa-trash-can';
+      icon.setAttribute('aria-hidden', 'true');
+      deleteButton.appendChild(icon);
+      deleteButton.addEventListener('click', event => deleteClassList(cls.id, event));
+      actions.appendChild(deleteButton);
+    }
+
+    card.append(info, actions);
     
     card.onclick = () => selectClassToEdit(cls.id);
+    card.onkeydown = event => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        selectClassToEdit(cls.id);
+      }
+    };
     container.appendChild(card);
   });
   
@@ -80,7 +110,7 @@ function loadClassEditorValues() {
   const currentClass = appState.classes.find(c => c.id === activeEditorClassId);
   if (!currentClass) return;
   
-  document.getElementById('editor-title-lbl').innerText = `編輯班級：${currentClass.name}`;
+  document.getElementById('editor-title-lbl').textContent = `編輯班級：${currentClass.name}`;
   document.getElementById('edit-class-name-input').value = currentClass.name;
   document.getElementById('edit-class-students-textarea').value = currentClass.students.join('\n');
 }

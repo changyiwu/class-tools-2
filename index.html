@@ -3,13 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ClassHub | 班級抽籤與多元工具箱</title>
-  <!-- FontAwesome for Premium Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <title>班級工具箱｜抽籤與多元教學工具</title>
   <!-- Core Design Stylesheet -->
   <link rel="stylesheet" href="css/style.css">
-  <!-- Canvas Confetti CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 </head>
 <body>
   <!-- Background Glow Effects -->
@@ -22,70 +18,71 @@
   <!-- Left Sidebar Navigation -->
   <aside id="sidebar">
     <div class="brand">
-      <div class="brand-logo">C</div>
-      <span class="brand-name">ClassHub</span>
+      <div class="brand-logo" aria-hidden="true">班</div>
+      <span class="brand-name">班級工具箱</span>
     </div>
     
     <ul class="nav-links">
       <li class="nav-item active" data-view="raffle">
-        <a onclick="switchView('raffle')">
+        <button type="button" class="nav-button" onclick="switchView('raffle')">
           <i class="fa-solid fa-dice"></i>
           <span>幸運大抽籤</span>
-        </a>
+        </button>
       </li>
       <li class="nav-item" data-view="noise">
-        <a onclick="switchView('noise')">
+        <button type="button" class="nav-button" onclick="switchView('noise')">
           <i class="fa-solid fa-volume-high"></i>
           <span>噪音監測器</span>
-        </a>
+        </button>
       </li>
       <li class="nav-item" data-view="groups">
-        <a onclick="switchView('groups')">
+        <button type="button" class="nav-button" onclick="switchView('groups')">
           <i class="fa-solid fa-users"></i>
           <span>隨機分組</span>
-        </a>
+        </button>
       </li>
       <li class="nav-item" data-view="seating">
-        <a onclick="switchView('seating')">
+        <button type="button" class="nav-button" onclick="switchView('seating')">
           <i class="fa-solid fa-chair"></i>
           <span>隨機座位表</span>
-        </a>
+        </button>
       </li>
       <li class="nav-item" data-view="timer">
-        <a onclick="switchView('timer')">
+        <button type="button" class="nav-button" onclick="switchView('timer')">
           <i class="fa-solid fa-stopwatch"></i>
           <span>計時器與碼表</span>
-        </a>
+        </button>
       </li>
       <li class="nav-item" data-view="scoreboard">
-        <a onclick="switchView('scoreboard')">
+        <button type="button" class="nav-button" onclick="switchView('scoreboard')">
           <i class="fa-solid fa-star"></i>
           <span>團隊計分板</span>
-        </a>
+        </button>
       </li>
       <li class="nav-item" data-view="manager" style="margin-top: auto; border-top: 1px solid var(--border-color); padding-top: 10px;">
-        <a onclick="switchView('manager')">
+        <button type="button" class="nav-button" onclick="switchView('manager')">
           <i class="fa-solid fa-list-check"></i>
           <span>名單與設定</span>
-        </a>
+        </button>
       </li>
     </ul>
     
     <div class="sidebar-footer">
-      <p>© 2026 ClassHub Dashboard</p>
+      <p>© 2026 班級工具箱</p>
     </div>
   </aside>
 
   <!-- Main Workspace -->
   <main>
     <header>
-      <div style="display: flex; align-items: center; gap: 16px;">
+      <div class="header-primary">
         <!-- Mobile Toggle Hamburger -->
-        <div class="hamburger" id="hamburger-toggle" onclick="toggleSidebar()">
+        <button type="button" class="hamburger" id="hamburger-toggle" onclick="toggleSidebar()" aria-label="開啟功能選單" aria-expanded="false" aria-controls="sidebar">
           <span></span>
           <span></span>
           <span></span>
-        </div>
+        </button>
+        <span class="mobile-header-brand">班級工具箱</span>
         <div class="header-title">
           <h1 id="current-view-title">幸運大抽籤</h1>
         </div>
@@ -93,13 +90,16 @@
       
       <div class="header-controls">
         <!-- Class Selector -->
-        <div class="select-wrapper">
-          <select id="header-class-select" onchange="changeActiveGlobalClass(this.value)">
-            <!-- Populated dynamically -->
-          </select>
+        <div id="header-class-context" class="class-context">
+          <label for="header-class-select">目前班級</label>
+          <div class="select-wrapper">
+            <select id="header-class-select" onchange="changeActiveGlobalClass(this.value)">
+              <!-- Populated dynamically -->
+            </select>
+          </div>
         </div>
         <!-- Sound Enable Toggle -->
-        <button id="sound-toggle-btn" class="btn btn-icon" onclick="toggleGlobalSound()" title="切換音效">
+        <button id="sound-toggle-btn" class="btn btn-icon" onclick="toggleGlobalSound()" title="切換音效" aria-label="關閉操作音效" aria-pressed="true">
           <i class="fa-solid fa-volume-high"></i>
         </button>
       </div>
@@ -138,7 +138,7 @@
             <!-- 1. Wheel Arena -->
             <div id="arena-wheel" class="wheel-container">
               <div class="wheel-pointer"></div>
-              <canvas id="wheel-canvas" width="400" height="400"></canvas>
+              <canvas id="wheel-canvas" width="400" height="400" role="img" aria-label="目前班級的抽籤轉盤"></canvas>
             </div>
             
             <!-- 2. Slot Arena -->
@@ -157,7 +157,19 @@
             <div id="winner-display" class="winner-overlay" style="display: none;">
               <div class="winner-title">🎉 恭喜中籤者 🎉</div>
               <div class="winner-name" id="winner-name-lbl">張三</div>
-              <button class="btn btn-primary" onclick="closeWinnerOverlay()">確認</button>
+              <div id="winner-score-actions" class="winner-score-actions">
+                <label for="winner-score-team-select">替小組加分</label>
+                <select id="winner-score-team-select"></select>
+                <label for="winner-score-amount-select">分數</label>
+                <select id="winner-score-amount-select">
+                  <option value="1">+1</option>
+                  <option value="2">+2</option>
+                  <option value="3">+3</option>
+                  <option value="5">+5</option>
+                </select>
+                <button type="button" class="btn btn-success" onclick="awardWinnerScore()">確認加分</button>
+              </div>
+              <button type="button" class="btn btn-primary" onclick="closeWinnerOverlay()">完成</button>
             </div>
           </div>
           
@@ -191,7 +203,7 @@
         <div class="glass-card noise-meter-display">
           <h3 style="margin-bottom: 20px; font-family: var(--font-accent);"><i class="fa-solid fa-gauge-high" style="color: var(--accent-secondary)"></i> 即時環境分貝</h3>
           <div class="gauge-container">
-            <canvas id="noise-gauge-canvas" class="gauge-canvas" width="280" height="280"></canvas>
+            <canvas id="noise-gauge-canvas" class="gauge-canvas" width="280" height="280" role="img" aria-label="即時環境音量儀表"></canvas>
             <div class="decibel-value">
               <span id="noise-decibel-num" class="decibel-num">0</span>
               <span class="decibel-unit">dB</span>
@@ -216,7 +228,7 @@
           
           <div class="setting-group">
             <div class="setting-label-row">
-              <span>噪音閾值 (臨界點)</span>
+              <label for="noise-threshold-slider">噪音閾值（臨界點）</label>
               <span><span id="threshold-val">65</span> dB</span>
             </div>
             <input type="range" id="noise-threshold-slider" min="40" max="100" value="65" oninput="updateNoiseThreshold(this.value)">
@@ -225,7 +237,7 @@
           
           <div class="setting-group">
             <div class="setting-label-row">
-              <span>警示延遲時間</span>
+              <label for="noise-delay-slider">警示延遲時間</label>
               <span><span id="delay-val">3</span> 秒</span>
             </div>
             <input type="range" id="noise-delay-slider" min="1" max="10" value="3" oninput="updateNoiseDelay(this.value)">
@@ -250,7 +262,7 @@
       <div class="glass-card" style="margin-bottom: 24px;">
         <div class="groups-controls">
           <div class="setting-group" style="flex: 1; min-width: 180px;">
-            <span style="font-size: 14px; font-weight: 500; margin-bottom: 6px; display: block;">分組模式</span>
+            <label for="group-mode-select" style="font-size: 14px; font-weight: 500; margin-bottom: 6px; display: block;">分組模式</label>
             <div class="select-wrapper">
               <select id="group-mode-select" onchange="toggleGroupInputLabel(this.value)">
                 <option value="count">自訂組數 (例如：分成 4 組)</option>
@@ -260,7 +272,7 @@
           </div>
           
           <div class="setting-group" style="width: 120px;">
-            <span id="group-input-label" style="font-size: 14px; font-weight: 500; margin-bottom: 6px; display: block;">分組組數</span>
+            <label for="group-target-num" id="group-input-label" style="font-size: 14px; font-weight: 500; margin-bottom: 6px; display: block;">分組組數</label>
             <input type="number" id="group-target-num" class="input-field" value="4" min="1" style="padding: 10px 16px;">
           </div>
           
@@ -279,6 +291,13 @@
             <p>請點擊「開始隨機分組」產生小組名單。</p>
           </div>
         </div>
+        <div id="groups-result-actions" class="result-actions" hidden>
+          <button type="button" class="btn" onclick="sendGroupsToScoreboard()"><i class="fa-solid fa-arrow-right"></i> 送到計分板</button>
+          <button type="button" class="btn" onclick="sendGroupsToSeating('cluster')"><i class="fa-solid fa-people-group"></i> 同組集中排座</button>
+          <button type="button" class="btn" onclick="sendGroupsToSeating('disperse')"><i class="fa-solid fa-arrows-left-right-to-line"></i> 各組分散排座</button>
+          <button type="button" class="btn" onclick="printGroupResults()"><i class="fa-solid fa-print"></i> 列印</button>
+          <button type="button" class="btn" onclick="downloadGroupResults()"><i class="fa-solid fa-image"></i> 下載圖片</button>
+        </div>
       </div>
     </div>
 
@@ -287,10 +306,13 @@
       <div class="seating-layout">
         <!-- Left Seating Grid -->
         <div class="glass-card seating-workspace">
-          <div class="classroom-stage">講台 (黑板位置)</div>
-          
-          <div class="seating-grid" id="classroom-seating-grid">
-            <!-- Populated dynamically -->
+          <div class="seating-scroll-shell" tabindex="0" aria-label="座位表，可左右捲動">
+            <div id="seating-canvas" class="seating-canvas">
+              <div class="classroom-stage">講台（黑板位置）</div>
+              <div class="seating-grid" id="classroom-seating-grid">
+                <!-- Populated dynamically -->
+              </div>
+            </div>
           </div>
         </div>
         
@@ -303,7 +325,7 @@
             
             <div class="setting-group" style="margin-bottom: 16px;">
               <div class="setting-label-row">
-                <span>教室座位橫排 (Rows)</span>
+                <label for="seat-rows-slider">教室座位橫排（Rows）</label>
                 <span><span id="seat-rows-val">5</span> 排</span>
               </div>
               <input type="range" id="seat-rows-slider" min="1" max="10" value="5" oninput="updateSeatingGridSize()">
@@ -311,7 +333,7 @@
             
             <div class="setting-group" style="margin-bottom: 24px;">
               <div class="setting-label-row">
-                <span>教室座位直列 (Columns)</span>
+                <label for="seat-cols-slider">教室座位直列（Columns）</label>
                 <span><span id="seat-cols-val">6</span> 列</span>
               </div>
               <input type="range" id="seat-cols-slider" min="1" max="10" value="6" oninput="updateSeatingGridSize()">
@@ -326,6 +348,9 @@
               </button>
               <button class="btn" onclick="printSeatingChart()">
                 <i class="fa-solid fa-print"></i> 列印座位表
+              </button>
+              <button class="btn" onclick="downloadSeatingChart()">
+                <i class="fa-solid fa-image"></i> 下載座位表圖片
               </button>
             </div>
             
@@ -368,13 +393,13 @@
         </div>
 
         <div class="timer-controls">
-          <button id="btn-timer-play" class="btn btn-primary btn-icon" onclick="startTimer()" title="開始">
+          <button id="btn-timer-play" class="btn btn-primary btn-icon" onclick="startTimer()" title="開始" aria-label="開始倒數">
             <i class="fa-solid fa-play"></i>
           </button>
-          <button id="btn-timer-pause" class="btn btn-icon" onclick="pauseTimer()" style="display: none;" title="暫停">
+          <button id="btn-timer-pause" class="btn btn-icon" onclick="pauseTimer()" style="display: none;" title="暫停" aria-label="暫停倒數">
             <i class="fa-solid fa-pause"></i>
           </button>
-          <button class="btn btn-icon" onclick="resetTimer()" title="重設">
+          <button class="btn btn-icon" onclick="resetTimer()" title="重設" aria-label="重設倒數">
             <i class="fa-solid fa-arrow-rotate-left"></i>
           </button>
         </div>
@@ -396,16 +421,16 @@
         <div id="stopwatch-digits-lbl" class="stopwatch-digits">00:00.00</div>
         
         <div class="timer-controls">
-          <button id="btn-stopwatch-play" class="btn btn-primary btn-icon" onclick="startStopwatch()" title="計時">
+          <button id="btn-stopwatch-play" class="btn btn-primary btn-icon" onclick="startStopwatch()" title="計時" aria-label="開始碼表">
             <i class="fa-solid fa-play"></i>
           </button>
-          <button id="btn-stopwatch-pause" class="btn btn-icon" onclick="pauseStopwatch()" style="display: none;" title="暫停">
+          <button id="btn-stopwatch-pause" class="btn btn-icon" onclick="pauseStopwatch()" style="display: none;" title="暫停" aria-label="暫停碼表">
             <i class="fa-solid fa-pause"></i>
           </button>
-          <button class="btn btn-icon" onclick="recordStopwatchLap()" title="單圈">
+          <button class="btn btn-icon" onclick="recordStopwatchLap()" title="單圈" aria-label="記錄單圈">
             <i class="fa-solid fa-flag"></i>
           </button>
-          <button class="btn btn-icon" onclick="resetStopwatch()" title="重設">
+          <button class="btn btn-icon" onclick="resetStopwatch()" title="重設" aria-label="重設碼表">
             <i class="fa-solid fa-arrow-rotate-left"></i>
           </button>
         </div>
@@ -422,7 +447,7 @@
     <div id="view-scoreboard" class="container">
       <div class="glass-card">
         <div class="scoreboard-controls-top">
-          <h3 style="font-family: var(--font-accent);"><i class="fa-solid fa-trophy" style="color: var(--accent-warning);"></i> 班級小組記分板</h3>
+          <h3 style="font-family: var(--font-accent);"><i class="fa-solid fa-trophy" style="color: var(--accent-warning);"></i> 活動小組記分板</h3>
           <div style="display: flex; gap: 12px;">
             <button class="btn btn-primary" onclick="addNewScoreboardTeam()">
               <i class="fa-solid fa-plus"></i> 新增小組
@@ -430,12 +455,28 @@
             <button class="btn" onclick="resetAllScores()">
               <i class="fa-solid fa-rotate-left"></i> 重置所有分數
             </button>
+            <button class="btn" id="btn-undo-score" onclick="undoLastScoreAction()">
+              <i class="fa-solid fa-rotate-left"></i> 復原上一步
+            </button>
+            <button class="btn" onclick="startNewScoreboardRound()">
+              <i class="fa-solid fa-flag-checkered"></i> 開始新回合
+            </button>
           </div>
         </div>
 
         <!-- Grid of scoreboard teams -->
         <div class="scoreboard-grid" id="scoreboard-grid-container">
           <!-- Populated dynamically -->
+        </div>
+        <div class="scoreboard-history-layout">
+          <section class="score-history-panel" aria-labelledby="score-history-title">
+            <h4 id="score-history-title">最近加扣分紀錄</h4>
+            <div id="score-history-list" class="score-history-list"></div>
+          </section>
+          <section class="score-history-panel" aria-labelledby="score-round-title">
+            <h4 id="score-round-title">已完成回合</h4>
+            <div id="score-round-list" class="score-history-list"></div>
+          </section>
         </div>
       </div>
     </div>
@@ -463,12 +504,12 @@
           
           <div class="editor-form">
             <div class="setting-group">
-              <label style="font-size: 14px; font-weight: 600;">班級名稱</label>
+              <label for="edit-class-name-input" style="font-size: 14px; font-weight: 600;">班級名稱</label>
               <input type="text" id="edit-class-name-input" class="input-field" placeholder="例如：三年一班">
             </div>
             
             <div class="setting-group">
-              <label style="font-size: 14px; font-weight: 600;">學生名單 (每行名字為一個學生)</label>
+              <label for="edit-class-students-textarea" style="font-size: 14px; font-weight: 600;">學生名單（每行名字為一個學生）</label>
               <textarea id="edit-class-students-textarea" class="input-field" placeholder="請在此輸入名字，例如：&#10;林小明&#10;陳華華&#10;黃大同"></textarea>
             </div>
             
@@ -483,8 +524,8 @@
   </main>
 
   <!-- Custom Alert Modal Dialog -->
-  <div id="alert-modal" class="custom-modal">
-    <div class="modal-content">
+  <div id="alert-modal" class="custom-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="alert-modal-header" aria-describedby="alert-modal-body" hidden>
+    <div class="modal-content" tabindex="-1">
       <div id="alert-modal-header" class="modal-header">提示</div>
       <div id="alert-modal-body" class="modal-body">內容</div>
       <div class="modal-footer">
@@ -493,8 +534,10 @@
       </div>
     </div>
   </div>
+  <div id="app-toast" class="app-toast" role="status" aria-live="polite" hidden></div>
 
   <!-- JavaScript Modules -->
+  <script type="module" src="vendor.mjs"></script>
   <script src="js/app.js"></script>
   <script src="js/raffle.js"></script>
   <script src="js/noise.js"></script>

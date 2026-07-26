@@ -4,12 +4,15 @@ let raffleState = {
   pool: [],            // Current eligible students remaining
   history: [],         // Drawn students: { name, time }
   isDrawing: false,
+  lastWinner: null,
   
   // Wheel specific variables
   wheelAngle: 0,
   wheelSpeed: 0,
   wheelColors: []
 };
+
+let raffleActiveClassId = '';
 
 // Canvas drawing context for wheel
 let wheelCanvas = null;
@@ -21,9 +24,19 @@ document.addEventListener('DOMContentLoaded', () => {
   wheelCanvas = document.getElementById('wheel-canvas');
   if (wheelCanvas) wheelCtx = wheelCanvas.getContext('2d');
   
-  // Register callbacks
+  raffleActiveClassId = appState.activeClassId;
+  loadRaffleState(raffleActiveClassId);
+
+  document.getElementById('raffle-exclude-checkbox').addEventListener('change', saveRaffleState);
+
   registerClassChangeCallback((classId) => {
-    resetRafflePool();
+    if (classId === raffleActiveClassId) {
+      resetRafflePool();
+      return;
+    }
+    saveRaffleState(raffleActiveClassId);
+    raffleActiveClassId = classId;
+    loadRaffleState(classId);
   });
   
   registerViewSwitchCallback((viewName) => {
@@ -37,9 +50,63 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Init local pool
-  resetRafflePool();
 });
+
+function getRaffleStorageKey(classId = raffleActiveClassId) {
+  return getClassScopedStorageKey('raffle', classId);
+}
+
+function loadRaffleState(classId) {
+  const saved = readStoredJson(getRaffleStorageKey(classId), null);
+  const students = getActiveStudents();
+  const validStudents = new Set(students);
+
+  if (saved) {
+    raffleState.currentMode = ['wheel', 'slot', 'cards'].includes(saved.currentMode) ? saved.currentMode : 'wheel';
+    raffleState.pool = Array.isArray(saved.pool)
+      ? saved.pool.filter(name => typeof name === 'string' && validStudents.has(name))
+      : [...students];
+    raffleState.history = Array.isArray(saved.history)
+      ? saved.history
+        .filter(item => item && typeof item.name === 'string' && typeof item.time === 'string')
+        .slice(0, 100)
+      : [];
+  } else {
+    raffleState.currentMode = 'wheel';
+    raffleState.pool = [...students];
+    raffleState.history = [];
+  }
+
+  raffleState.isDrawing = false;
+  raffleState.lastWinner = null;
+  document.getElementById('raffle-exclude-checkbox').checked = Boolean(saved?.exclude);
+  document.querySelectorAll('.raffle-mode-btn[data-mode]').forEach(button => {
+    button.classList.toggle('active', button.dataset.mode === raffleState.currentMode);
+  });
+  document.getElementById('arena-wheel').style.display = raffleState.currentMode === 'wheel' ? 'block' : 'none';
+  document.getElementById('arena-slot').style.display = raffleState.currentMode === 'slot' ? 'flex' : 'none';
+  document.getElementById('arena-cards').style.display = raffleState.currentMode === 'cards' ? 'flex' : 'none';
+  rebuildWheelColors();
+  updateHistoryUI();
+  renderRaffleArena();
+}
+
+function saveRaffleState(classId = raffleActiveClassId) {
+  if (!classId) return;
+  writeStoredJson(getRaffleStorageKey(classId), {
+    currentMode: raffleState.currentMode,
+    pool: raffleState.pool,
+    history: raffleState.history,
+    exclude: document.getElementById('raffle-exclude-checkbox')?.checked || false
+  });
+}
+
+function rebuildWheelColors() {
+  raffleState.wheelColors = raffleState.pool.map((_, index) => {
+    const hue = (index * (360 / Math.max(1, raffleState.pool.length))) % 360;
+    return `hsl(${hue}, 75%, 60%)`;
+  });
+}
 
 function setRaffleMode(mode) {
   if (raffleState.isDrawing) return;
@@ -60,19 +127,14 @@ function setRaffleMode(mode) {
   document.getElementById('arena-cards').style.display = mode === 'cards' ? 'flex' : 'none';
   
   renderRaffleArena();
+  saveRaffleState();
 }
 
 function resetRafflePool() {
   const students = getActiveStudents();
   raffleState.pool = [...students];
-  
-  // Populate HSL colors for each student in the pool
-  raffleState.wheelColors = [];
-  for (let i = 0; i < students.length; i++) {
-    const hue = (i * (360 / Math.max(1, students.length))) % 360;
-    raffleState.wheelColors.push(`hsl(${hue}, 75%, 60%)`);
-  }
-  
+  rebuildWheelColors();
+  saveRaffleState();
   renderRaffleArena();
 }
 
@@ -237,11 +299,14 @@ function getWheelWinner() {
 // ==========================================
 function setupSlotItems() {
   const wrapper = document.getElementById('slot-wrapper');
-  wrapper.innerHTML = '';
+  wrapper.replaceChildren();
   wrapper.style.transform = 'translateY(0px)';
   
   if (raffleState.pool.length === 0) {
-    wrapper.innerHTML = '<div class="slot-item">無名單</div>';
+    const emptyItem = document.createElement('div');
+    emptyItem.className = 'slot-item';
+    emptyItem.textContent = '無名單';
+    wrapper.appendChild(emptyItem);
     return;
   }
   
@@ -270,7 +335,7 @@ function spinSlot() {
   }
   
   // Insert elements to DOM
-  wrapper.innerHTML = '';
+  wrapper.replaceChildren();
   scrollItems.forEach(name => {
     const el = document.createElement('div');
     el.className = 'slot-item';
@@ -327,31 +392,39 @@ function spinSlot() {
 // ==========================================
 function setupCards() {
   const container = document.getElementById('arena-cards');
-  container.innerHTML = '';
+  container.replaceChildren();
   
   const pool = raffleState.pool;
   if (pool.length === 0) {
-    container.innerHTML = '<p style="color:var(--text-muted)">請先在設定中輸入名單</p>';
+    const emptyState = document.createElement('p');
+    emptyState.className = 'raffle-empty-state';
+    emptyState.textContent = '請先在設定中輸入名單';
+    container.appendChild(emptyState);
     return;
   }
   
   pool.forEach((name, index) => {
-    const card = document.createElement('div');
+    const card = document.createElement('button');
+    card.type = 'button';
     card.className = 'flip-card';
     card.setAttribute('data-index', index);
+    card.setAttribute('aria-label', `翻開第 ${index + 1} 張神秘卡牌`);
+
+    const inner = document.createElement('span');
+    inner.className = 'flip-card-inner';
+    const front = document.createElement('span');
+    front.className = 'flip-card-front';
+    const icon = document.createElement('i');
+    icon.className = 'fa-solid fa-question';
+    icon.setAttribute('aria-hidden', 'true');
+    front.appendChild(icon);
+    const back = document.createElement('span');
+    back.className = 'flip-card-back';
+    back.textContent = name;
+    inner.append(front, back);
+    card.appendChild(inner);
     
-    card.innerHTML = `
-      <div class="flip-card-inner">
-        <div class="flip-card-front">
-          <i class="fa-solid fa-question"></i>
-        </div>
-        <div class="flip-card-back">
-          ${name}
-        </div>
-      </div>
-    `;
-    
-    card.onclick = () => selectCard(card, index, name);
+    card.addEventListener('click', () => selectCard(card, index, name));
     container.appendChild(card);
   });
 }
@@ -446,6 +519,7 @@ function finishDraw() {
   
   // Play major winning synthesis chord
   playSynthSound('win');
+  raffleState.lastWinner = { index: winner.index, name: winner.name };
   
   // Add Confetti explosion!
   if (window.confetti) {
@@ -458,6 +532,8 @@ function finishDraw() {
   
   // Show Winner Overlay
   document.getElementById('winner-name-lbl').innerText = winner.name;
+  document.querySelector('.winner-title').textContent = '🎉 恭喜中籤者 🎉';
+  populateWinnerScoreControls();
   document.getElementById('winner-display').style.display = 'flex';
   
   // Add to history list
@@ -481,6 +557,30 @@ function finishDraw() {
   }
   
   raffleState.isDrawing = false;
+  saveRaffleState();
+}
+
+function populateWinnerScoreControls() {
+  const actions = document.getElementById('winner-score-actions');
+  const teamSelect = document.getElementById('winner-score-team-select');
+  const teams = typeof getScoreboardTeams === 'function' ? getScoreboardTeams() : [];
+  teamSelect.replaceChildren();
+  actions.hidden = teams.length === 0;
+  teams.forEach(team => {
+    const option = document.createElement('option');
+    option.value = team.id;
+    option.textContent = team.name;
+    teamSelect.appendChild(option);
+  });
+}
+
+function awardWinnerScore() {
+  const teamId = document.getElementById('winner-score-team-select').value;
+  const amount = Number.parseInt(document.getElementById('winner-score-amount-select').value, 10);
+  if (!teamId || !Number.isFinite(amount) || !raffleState.lastWinner) return;
+  const team = getScoreboardTeams().find(item => item.id === teamId);
+  adjustTeamScore(teamId, amount, `抽中 ${raffleState.lastWinner.name}`);
+  document.querySelector('.winner-title').textContent = `已替${team?.name || '小組'}加 ${amount} 分`;
 }
 
 function closeWinnerOverlay() {
@@ -493,25 +593,32 @@ function closeWinnerOverlay() {
 
 function updateHistoryUI() {
   const container = document.getElementById('raffle-history-list');
-  container.innerHTML = '';
+  container.replaceChildren();
   
   if (raffleState.history.length === 0) {
-    container.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:20px;font-size:13px;">尚無抽籤紀錄</div>';
+    const emptyState = document.createElement('div');
+    emptyState.className = 'history-empty-state';
+    emptyState.textContent = '尚無抽籤紀錄';
+    container.appendChild(emptyState);
     return;
   }
   
   raffleState.history.forEach(item => {
     const el = document.createElement('div');
     el.className = 'history-item';
-    el.innerHTML = `
-      <span class="history-item-name">${item.name}</span>
-      <span class="history-item-time">${item.time}</span>
-    `;
+    const name = document.createElement('span');
+    name.className = 'history-item-name';
+    name.textContent = item.name;
+    const time = document.createElement('span');
+    time.className = 'history-item-time';
+    time.textContent = item.time;
+    el.append(name, time);
     container.appendChild(el);
   });
 }
 
 function clearRaffleHistory() {
   raffleState.history = [];
+  saveRaffleState();
   updateHistoryUI();
 }

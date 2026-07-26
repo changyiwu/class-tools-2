@@ -1,55 +1,103 @@
-// Group Generator State
 let groupState = {
-  mode: 'count', // 'count' = divide into X groups, 'size' = X students per group
+  mode: 'count',
   targetNum: 4,
-  groups: [],    // Array of arrays: [ [name1, name2], [name3, name4] ]
+  groups: [],
   draggedStudent: null,
-  sourceGroupIndex: null
+  sourceGroupIndex: null,
+  selectedStudent: null
 };
 
+let groupsActiveClassId = '';
+
 document.addEventListener('DOMContentLoaded', () => {
-  registerClassChangeCallback((classId) => {
-    clearGroupsUI();
-  });
-  
-  registerViewSwitchCallback((viewName) => {
-    if (viewName === 'groups' && groupState.groups.length > 0) {
+  groupsActiveClassId = appState.activeClassId;
+  loadGroupsState(groupsActiveClassId);
+
+  registerClassChangeCallback(classId => {
+    if (classId === groupsActiveClassId) {
+      groupState.groups = [];
+      groupState.selectedStudent = null;
+      saveGroupsState(classId);
       renderGroups();
+      return;
     }
+    saveGroupsState(groupsActiveClassId);
+    groupsActiveClassId = classId;
+    loadGroupsState(classId);
+  });
+
+  registerViewSwitchCallback(viewName => {
+    if (viewName === 'groups') renderGroups();
   });
 });
 
-function toggleGroupInputLabel(val) {
-  groupState.mode = val;
-  const label = document.getElementById('group-input-label');
-  const input = document.getElementById('group-target-num');
-  
-  if (val === 'count') {
-    label.innerText = '分組組數';
-    input.value = 4;
+function getGroupsStorageKey(classId = groupsActiveClassId) {
+  return getClassScopedStorageKey('groups', classId);
+}
+
+function loadGroupsState(classId) {
+  const saved = readStoredJson(getGroupsStorageKey(classId), null);
+  const validStudents = new Set(getActiveStudents());
+
+  if (saved && Array.isArray(saved.groups)) {
+    groupState.mode = saved.mode === 'size' ? 'size' : 'count';
+    groupState.targetNum = Math.max(1, Number.parseInt(saved.targetNum, 10) || 4);
+    groupState.groups = saved.groups
+      .filter(Array.isArray)
+      .map(group => group.filter(name => typeof name === 'string' && validStudents.has(name)));
   } else {
-    label.innerText = '每組人數';
-    input.value = 5;
+    groupState.mode = 'count';
+    groupState.targetNum = 4;
+    groupState.groups = [];
   }
+
+  groupState.selectedStudent = null;
+  groupState.draggedStudent = null;
+  groupState.sourceGroupIndex = null;
+
+  const modeSelect = document.getElementById('group-mode-select');
+  const numberInput = document.getElementById('group-target-num');
+  if (modeSelect) modeSelect.value = groupState.mode;
+  if (numberInput) numberInput.value = groupState.targetNum;
+  updateGroupInputLabel();
+  renderGroups();
+}
+
+function saveGroupsState(classId = groupsActiveClassId) {
+  if (!classId) return;
+  writeStoredJson(getGroupsStorageKey(classId), {
+    mode: groupState.mode,
+    targetNum: groupState.targetNum,
+    groups: groupState.groups
+  });
+}
+
+function updateGroupInputLabel() {
+  const label = document.getElementById('group-input-label');
+  if (label) label.textContent = groupState.mode === 'count' ? '分組組數' : '每組人數';
+}
+
+function toggleGroupInputLabel(value) {
+  groupState.mode = value === 'size' ? 'size' : 'count';
+  groupState.targetNum = groupState.mode === 'count' ? 4 : 5;
+  const input = document.getElementById('group-target-num');
+  if (input) input.value = groupState.targetNum;
+  updateGroupInputLabel();
+  saveGroupsState();
 }
 
 function clearGroupsUI() {
   groupState.groups = [];
-  const container = document.getElementById('groups-grid-container');
-  container.innerHTML = `
-    <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">
-      <i class="fa-solid fa-users" style="font-size: 48px; margin-bottom: 16px; opacity: 0.3;"></i>
-      <p>請點擊「開始隨機分組」產生小組名單。</p>
-    </div>
-  `;
+  groupState.selectedStudent = null;
+  saveGroupsState();
+  renderGroups();
 }
 
-// Fisher-Yates Shuffle Algorithm
-function shuffleArray(arr) {
-  const result = [...arr];
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [result[i], result[j]] = [result[j], result[i]];
+function shuffleArray(array) {
+  const result = [...array];
+  for (let index = result.length - 1; index > 0; index--) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [result[index], result[randomIndex]] = [result[randomIndex], result[index]];
   }
   return result;
 }
@@ -60,182 +108,236 @@ function generateRandomGroups() {
     showCustomModal('分組失敗', '目前班級沒有任何學生，請先至「名單與設定」中新增學生名單。');
     return;
   }
-  
-  const targetNumInput = document.getElementById('group-target-num');
-  let val = parseInt(targetNumInput.value);
-  if (isNaN(val) || val < 1) {
-    val = 1;
-    targetNumInput.value = 1;
-  }
-  
-  groupState.targetNum = val;
+
+  const targetInput = document.getElementById('group-target-num');
+  let target = Number.parseInt(targetInput.value, 10);
+  if (!Number.isFinite(target) || target < 1) target = 1;
+  targetInput.value = target;
+  groupState.targetNum = target;
   groupState.groups = [];
-  
+  groupState.selectedStudent = null;
+
   if (groupState.mode === 'count') {
-    // 1. Group by Count: Create exactly X groups
-    const groupCount = Math.min(val, students.length);
-    for (let i = 0; i < groupCount; i++) {
-      groupState.groups.push([]);
-    }
-    
-    // Distribute students round-robin
+    const groupCount = Math.min(target, students.length);
+    groupState.groups = Array.from({ length: groupCount }, () => []);
     students.forEach((student, index) => {
-      const groupIdx = index % groupCount;
-      groupState.groups[groupIdx].push(student);
+      groupState.groups[index % groupCount].push(student);
     });
   } else {
-    // 2. Group by Size: X students per group
-    const studentsPerGroup = val;
-    const groupCount = Math.ceil(students.length / studentsPerGroup);
-    
-    for (let i = 0; i < groupCount; i++) {
-      const start = i * studentsPerGroup;
-      const end = start + studentsPerGroup;
-      groupState.groups.push(students.slice(start, end));
+    const groupCount = Math.ceil(students.length / target);
+    for (let index = 0; index < groupCount; index++) {
+      groupState.groups.push(students.slice(index * target, (index + 1) * target));
     }
   }
-  
+
+  saveGroupsState();
   playSynthSound('win');
   renderGroups();
 }
 
+function createGroupsEmptyState(container) {
+  const emptyState = document.createElement('div');
+  emptyState.className = 'groups-empty-state';
+  const icon = document.createElement('i');
+  icon.className = 'fa-solid fa-users';
+  icon.setAttribute('aria-hidden', 'true');
+  const message = document.createElement('p');
+  message.textContent = '請點擊「開始隨機分組」產生小組名單。';
+  emptyState.append(icon, message);
+  container.appendChild(emptyState);
+}
+
 function renderGroups() {
   const container = document.getElementById('groups-grid-container');
-  container.innerHTML = '';
-  
+  const actions = document.getElementById('groups-result-actions');
+  if (!container || !actions) return;
+  container.replaceChildren();
+
   if (groupState.groups.length === 0) {
-    clearGroupsUI();
+    actions.hidden = true;
+    createGroupsEmptyState(container);
     return;
   }
-  
-  // Nice pastel colors palette for group headers
+
+  actions.hidden = false;
   const headerColors = [
-    'hsl(265, 75%, 65%)', // Purple
-    'hsl(190, 80%, 45%)', // Cyan
-    'hsl(145, 75%, 45%)', // Green
-    'hsl(35, 85%, 55%)',  // Orange
-    'hsl(350, 75%, 60%)', // Red
-    'hsl(215, 80%, 55%)', // Blue
-    'hsl(300, 70%, 55%)', // Pink
-    'hsl(80, 70%, 45%)'   // Lime
+    'hsl(265, 75%, 65%)',
+    'hsl(190, 80%, 45%)',
+    'hsl(145, 75%, 45%)',
+    'hsl(35, 85%, 55%)',
+    'hsl(350, 75%, 60%)',
+    'hsl(215, 80%, 55%)',
+    'hsl(300, 70%, 55%)',
+    'hsl(80, 70%, 45%)'
   ];
-  
-  groupState.groups.forEach((groupStudents, groupIdx) => {
-    const cardColor = headerColors[groupIdx % headerColors.length];
-    
-    const card = document.createElement('div');
+
+  groupState.groups.forEach((students, groupIndex) => {
+    const card = document.createElement('section');
     card.className = 'group-card';
-    card.setAttribute('data-group-index', groupIdx);
-    
-    // Drag and drop event listeners on the group card
+    card.dataset.groupIndex = String(groupIndex);
     card.addEventListener('dragover', dragOverGroup);
     card.addEventListener('dragenter', dragEnterGroup);
     card.addEventListener('dragleave', dragLeaveGroup);
     card.addEventListener('drop', dropOnGroup);
-    
-    // Header
+
+    const canReceiveSelected = groupState.selectedStudent && groupState.selectedStudent.groupIndex !== groupIndex;
+    if (canReceiveSelected) {
+      card.classList.add('move-target');
+    }
+
     const header = document.createElement('div');
     header.className = 'group-card-header colored';
-    header.style.setProperty('--group-color', cardColor);
-    header.innerHTML = `
-      <span>第 ${groupIdx + 1} 組</span>
-      <span style="font-size: 13px; font-weight:500;">(${groupStudents.length} 人)</span>
-    `;
-    card.appendChild(header);
-    
-    // Students list
-    const listContainer = document.createElement('div');
-    listContainer.className = 'group-student-list';
-    
-    if (groupStudents.length === 0) {
-      listContainer.innerHTML = '<div style="color:var(--text-muted);text-align:center;font-size:12px;padding:20px;border:1px dashed var(--border-color);border-radius:var(--radius-sm)">拖曳學生至此</div>';
+    header.style.setProperty('--group-color', headerColors[groupIndex % headerColors.length]);
+    const headerSummary = document.createElement('div');
+    headerSummary.className = 'group-card-summary';
+    const title = document.createElement('span');
+    title.textContent = `第 ${groupIndex + 1} 組`;
+    const count = document.createElement('span');
+    count.className = 'group-member-count';
+    count.textContent = `${students.length} 人`;
+    headerSummary.append(title, count);
+    header.appendChild(headerSummary);
+
+    if (canReceiveSelected) {
+      const targetButton = document.createElement('button');
+      targetButton.type = 'button';
+      targetButton.className = 'group-target-button';
+      targetButton.textContent = '移到這組';
+      targetButton.setAttribute('aria-label', `將${groupState.selectedStudent.name}移到第 ${groupIndex + 1} 組`);
+      targetButton.addEventListener('click', () => moveSelectedStudentToGroup(groupIndex));
+      header.appendChild(targetButton);
+    }
+
+    const studentList = document.createElement('div');
+    studentList.className = 'group-student-list';
+    if (students.length === 0) {
+      const placeholder = document.createElement('div');
+      placeholder.className = 'group-drop-placeholder';
+      placeholder.textContent = canReceiveSelected ? '使用上方按鈕移入學生' : '拖曳學生至此';
+      studentList.appendChild(placeholder);
     } else {
-      groupStudents.forEach((name, studentIdx) => {
-        const tag = document.createElement('div');
-        tag.className = 'student-tag';
-        tag.setAttribute('draggable', 'true');
-        tag.innerHTML = `
-          <span>${name}</span>
-          <i class="fa-solid fa-grip-lines" style="color:var(--text-muted);font-size:11px;"></i>
-        `;
-        
-        // Drag events on the student tag
-        tag.addEventListener('dragstart', (e) => dragStartStudent(e, name, groupIdx, studentIdx));
-        tag.addEventListener('dragend', dragEndStudent);
-        
-        listContainer.appendChild(tag);
+      students.forEach((name, studentIndex) => {
+        const studentButton = document.createElement('button');
+        studentButton.type = 'button';
+        studentButton.className = 'student-tag';
+        studentButton.draggable = true;
+        const isSelected = groupState.selectedStudent?.groupIndex === groupIndex
+          && groupState.selectedStudent?.studentIndex === studentIndex;
+        studentButton.classList.toggle('selected', isSelected);
+        studentButton.setAttribute('aria-pressed', String(isSelected));
+        studentButton.setAttribute('aria-label', isSelected
+          ? `${name}已選取，請選擇目標小組`
+          : `選取${name}並移動到其他小組`);
+
+        const nameText = document.createElement('span');
+        nameText.textContent = name;
+        const grip = document.createElement('i');
+        grip.className = 'fa-solid fa-grip-lines';
+        grip.setAttribute('aria-hidden', 'true');
+        studentButton.append(nameText, grip);
+
+        studentButton.addEventListener('click', event => {
+          event.stopPropagation();
+          selectStudentForMove(name, groupIndex, studentIndex);
+        });
+        studentButton.addEventListener('dragstart', event => dragStartStudent(event, name, groupIndex, studentIndex));
+        studentButton.addEventListener('dragend', dragEndStudent);
+        studentList.appendChild(studentButton);
       });
     }
-    
-    card.appendChild(listContainer);
+
+    card.append(header, studentList);
     container.appendChild(card);
   });
 }
 
-// ==========================================
-// DRAG AND DROP HANDLERS
-// ==========================================
-function dragStartStudent(e, name, groupIdx, studentIdx) {
-  groupState.draggedStudent = name;
-  groupState.sourceGroupIndex = groupIdx;
-  
-  // Highlight currently dragging element
-  e.currentTarget.classList.add('dragging');
-  
-  // Necessary for Firefox drag-drop
-  e.dataTransfer.setData('text/plain', name);
-  e.dataTransfer.effectAllowed = 'move';
-}
-
-function dragEndStudent(e) {
-  e.currentTarget.classList.remove('dragging');
-  
-  // Clean state
-  groupState.draggedStudent = null;
-  groupState.sourceGroupIndex = null;
-  
-  // Remove all drag-over classes from cards
-  document.querySelectorAll('.group-card').forEach(card => {
-    card.classList.remove('drag-over');
-  });
-}
-
-function dragOverGroup(e) {
-  e.preventDefault(); // Required to allow drop
-  e.dataTransfer.dropEffect = 'move';
-}
-
-function dragEnterGroup(e) {
-  e.preventDefault();
-  e.currentTarget.classList.add('drag-over');
-}
-
-function dragLeaveGroup(e) {
-  e.currentTarget.classList.remove('drag-over');
-}
-
-function dropOnGroup(e) {
-  e.preventDefault();
-  const destGroupIdx = parseInt(e.currentTarget.getAttribute('data-group-index'));
-  const srcGroupIdx = groupState.sourceGroupIndex;
-  const name = groupState.draggedStudent;
-  
-  e.currentTarget.classList.remove('drag-over');
-  
-  if (srcGroupIdx === null || isNaN(destGroupIdx) || srcGroupIdx === destGroupIdx) return;
-  
-  // Move student in state array
-  const studentIndex = groupState.groups[srcGroupIdx].indexOf(name);
-  if (studentIndex > -1) {
-    // Remove from source group
-    groupState.groups[srcGroupIdx].splice(studentIndex, 1);
-    // Add to dest group
-    groupState.groups[destGroupIdx].push(name);
-    
-    // Play micro-click audio
+function selectStudentForMove(name, groupIndex, studentIndex) {
+  const current = groupState.selectedStudent;
+  if (current?.groupIndex === groupIndex && current?.studentIndex === studentIndex) {
+    groupState.selectedStudent = null;
+  } else {
+    groupState.selectedStudent = { name, groupIndex, studentIndex };
     playSynthSound('tick');
-    
-    // Re-render
-    renderGroups();
   }
+  renderGroups();
+}
+
+function moveSelectedStudentToGroup(destinationGroupIndex) {
+  const selected = groupState.selectedStudent;
+  if (!selected || selected.groupIndex === destinationGroupIndex) return;
+  const sourceGroup = groupState.groups[selected.groupIndex];
+  const destinationGroup = groupState.groups[destinationGroupIndex];
+  const [student] = sourceGroup.splice(selected.studentIndex, 1);
+  if (student) destinationGroup.push(student);
+  groupState.selectedStudent = null;
+  saveGroupsState();
+  playSynthSound('tick');
+  renderGroups();
+}
+
+function dragStartStudent(event, name, groupIndex, studentIndex) {
+  groupState.draggedStudent = { name, groupIndex, studentIndex };
+  event.currentTarget.classList.add('dragging');
+  event.dataTransfer.setData('text/plain', name);
+  event.dataTransfer.effectAllowed = 'move';
+}
+
+function dragEndStudent(event) {
+  event.currentTarget.classList.remove('dragging');
+  groupState.draggedStudent = null;
+  document.querySelectorAll('.group-card').forEach(card => card.classList.remove('drag-over'));
+}
+
+function dragOverGroup(event) {
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'move';
+}
+
+function dragEnterGroup(event) {
+  event.preventDefault();
+  event.currentTarget.classList.add('drag-over');
+}
+
+function dragLeaveGroup(event) {
+  event.currentTarget.classList.remove('drag-over');
+}
+
+function dropOnGroup(event) {
+  event.preventDefault();
+  event.currentTarget.classList.remove('drag-over');
+  const destinationGroupIndex = Number.parseInt(event.currentTarget.dataset.groupIndex, 10);
+  const source = groupState.draggedStudent;
+  if (!source || !Number.isFinite(destinationGroupIndex) || source.groupIndex === destinationGroupIndex) return;
+  groupState.selectedStudent = source;
+  moveSelectedStudentToGroup(destinationGroupIndex);
+  groupState.draggedStudent = null;
+}
+
+async function sendGroupsToScoreboard() {
+  if (groupState.groups.length === 0) return;
+  const confirmed = await showCustomModal(
+    '送到計分板',
+    '這會以目前分組建立新的計分板隊伍，並覆蓋現有隊伍與分數。確定繼續嗎？',
+    true
+  );
+  if (!confirmed) return;
+  replaceScoreboardTeamsFromGroups(groupState.groups);
+  switchView('scoreboard');
+}
+
+function sendGroupsToSeating(strategy) {
+  if (groupState.groups.length === 0) return;
+  applyGroupsToSeating(groupState.groups, strategy);
+  switchView('seating');
+}
+
+function printGroupResults() {
+  document.body.classList.add('print-groups');
+  window.addEventListener('afterprint', () => document.body.classList.remove('print-groups'), { once: true });
+  window.print();
+}
+
+function downloadGroupResults() {
+  const card = document.querySelector('#view-groups > .glass-card');
+  downloadElementAsImage(card, `分組結果-${new Date().toISOString().slice(0, 10)}.png`);
 }

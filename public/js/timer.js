@@ -73,20 +73,34 @@ function setPresetTimer(seconds) {
 }
 
 function promptCustomTimer() {
-  showCustomModal('自訂計時器', `
-    <div style="display:flex; gap:10px; align-items:center; justify-content:center; margin-top:10px;">
-      <input type="number" id="custom-min" class="input-field" placeholder="分" style="width:80px; text-align:center;" min="0" max="180" value="5">
-      <span style="font-weight:bold;">分</span>
-      <input type="number" id="custom-sec" class="input-field" placeholder="秒" style="width:80px; text-align:center;" min="0" max="59" value="0">
-      <span style="font-weight:bold;">秒</span>
-    </div>
-  `, true).then(confirmed => {
+  const fields = document.createElement('div');
+  fields.className = 'custom-time-fields';
+  const minuteLabel = document.createElement('label');
+  minuteLabel.htmlFor = 'custom-min';
+  minuteLabel.textContent = '分鐘';
+  const minuteInput = document.createElement('input');
+  minuteInput.type = 'number';
+  minuteInput.id = 'custom-min';
+  minuteInput.className = 'input-field';
+  minuteInput.min = '0';
+  minuteInput.max = '180';
+  minuteInput.value = '5';
+  const secondLabel = document.createElement('label');
+  secondLabel.htmlFor = 'custom-sec';
+  secondLabel.textContent = '秒數';
+  const secondInput = document.createElement('input');
+  secondInput.type = 'number';
+  secondInput.id = 'custom-sec';
+  secondInput.className = 'input-field';
+  secondInput.min = '0';
+  secondInput.max = '59';
+  secondInput.value = '0';
+  fields.append(minuteLabel, minuteInput, secondLabel, secondInput);
+
+  showCustomModal('自訂計時器', fields, true).then(confirmed => {
     if (confirmed) {
-      const minInput = document.getElementById('custom-min');
-      const secInput = document.getElementById('custom-sec');
-      
-      let mins = parseInt(minInput.value) || 0;
-      let secs = parseInt(secInput.value) || 0;
+      let mins = parseInt(minuteInput.value) || 0;
+      let secs = parseInt(secondInput.value) || 0;
       
       mins = Math.max(0, Math.min(180, mins));
       secs = Math.max(0, Math.min(59, secs));
@@ -215,7 +229,7 @@ function resetStopwatch() {
   timerState.laps = [];
   
   updateStopwatchUI();
-  document.getElementById('stopwatch-lap-list').innerHTML = '';
+  document.getElementById('stopwatch-lap-list').replaceChildren();
 }
 
 function recordStopwatchLap() {
@@ -233,15 +247,17 @@ function recordStopwatchLap() {
   
   // Render lap rows
   const container = document.getElementById('stopwatch-lap-list');
-  container.innerHTML = '';
+  container.replaceChildren();
   
   timerState.laps.forEach((lap, idx) => {
     const el = document.createElement('div');
     el.className = 'lap-item';
-    el.innerHTML = `
-      <span style="font-weight:600; color:var(--accent-secondary)">單圈 ${timerState.laps.length - idx}</span>
-      <span>${lap}</span>
-    `;
+    const label = document.createElement('span');
+    label.className = 'lap-label';
+    label.textContent = `單圈 ${timerState.laps.length - idx}`;
+    const time = document.createElement('span');
+    time.textContent = lap;
+    el.append(label, time);
     container.appendChild(el);
   });
 }

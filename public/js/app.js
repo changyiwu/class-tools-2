@@ -6,6 +6,8 @@ let appState = {
   currentView: 'raffle'
 };
 
+const CLASS_SCOPED_VIEWS = new Set(['raffle', 'groups', 'seating']);
+
 // Web Audio API Sound Generator
 let audioCtx = null;
 function playSynthSound(type) {
@@ -95,10 +97,21 @@ function playSynthSound(type) {
 
 // Custom Promise-based Alert/Confirm Modal System
 let modalResolveFn = null;
-function showCustomModal(title, bodyText, showCancelBtn = false) {
+let modalPreviousFocus = null;
+
+function showCustomModal(title, bodyContent, showCancelBtn = false) {
   return new Promise((resolve) => {
-    document.getElementById('alert-modal-header').innerText = title;
-    document.getElementById('alert-modal-body').innerHTML = bodyText;
+    const modal = document.getElementById('alert-modal');
+    const modalBody = document.getElementById('alert-modal-body');
+    const okBtn = document.getElementById('alert-modal-ok-btn');
+    document.getElementById('alert-modal-header').textContent = title;
+    modalBody.replaceChildren();
+
+    if (bodyContent instanceof Node) {
+      modalBody.appendChild(bodyContent);
+    } else {
+      modalBody.textContent = String(bodyContent);
+    }
     
     const cancelBtn = document.getElementById('alert-modal-cancel-btn');
     if (showCancelBtn) {
@@ -107,16 +120,57 @@ function showCustomModal(title, bodyText, showCancelBtn = false) {
       cancelBtn.style.display = 'none';
     }
     
-    document.getElementById('alert-modal').classList.add('active');
+    modalPreviousFocus = document.activeElement;
+    modal.hidden = false;
+    modal.classList.add('active');
+    modal.setAttribute('aria-hidden', 'false');
     modalResolveFn = resolve;
+
+    requestAnimationFrame(() => {
+      const firstInput = modal.querySelector('input, select, textarea');
+      (firstInput || okBtn).focus();
+    });
   });
 }
 
 function closeAlertModal(confirmed) {
-  document.getElementById('alert-modal').classList.remove('active');
+  const modal = document.getElementById('alert-modal');
+  modal.classList.remove('active');
+  modal.setAttribute('aria-hidden', 'true');
+  modal.hidden = true;
   if (modalResolveFn) {
     modalResolveFn(confirmed);
     modalResolveFn = null;
+  }
+  if (modalPreviousFocus && typeof modalPreviousFocus.focus === 'function') {
+    modalPreviousFocus.focus();
+  }
+  modalPreviousFocus = null;
+}
+
+function handleModalKeyboard(event) {
+  const modal = document.getElementById('alert-modal');
+  if (!modal.classList.contains('active')) return;
+
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    closeAlertModal(false);
+    return;
+  }
+
+  if (event.key !== 'Tab') return;
+  const focusable = [...modal.querySelectorAll('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+    .filter(element => !element.hidden && element.offsetParent !== null);
+  if (focusable.length === 0) return;
+
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
   }
 }
 
@@ -127,6 +181,30 @@ const STORAGE_KEYS = {
   SOUND_ENABLED: 'classhub_sound_enabled'
 };
 
+function getClassScopedStorageKey(feature, classId = appState.activeClassId) {
+  return `classhub_${feature}_${classId}`;
+}
+
+function readStoredJson(key, fallback = null) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (error) {
+    console.error(`無法讀取本機資料：${key}`, error);
+    return fallback;
+  }
+}
+
+function writeStoredJson(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch (error) {
+    console.error(`無法儲存本機資料：${key}`, error);
+    return false;
+  }
+}
+
 const DEFAULT_CLASSES = [
   {
     id: 'class_universal',
@@ -135,24 +213,45 @@ const DEFAULT_CLASSES = [
   },
   {
     id: 'class_1',
-    name: '三年一班 (範例)',
+    name: '晨光班（範例）',
     students: [
-      '王小明', '李小華', '張大同', '陳美麗', '黃春嬌', 
-      '趙鐵雄', '錢進步', '孫悟空', '周杰倫', '蔡依林', 
-      '吳克群', '楊丞琳', '羅志祥', '蕭敬騰', '林俊傑', 
-      '鄧紫棋', '周興哲', '田馥甄', '許光漢', '柯佳嬿'
+      '林若晴', '陳宇安', '王品妍', '李承恩', '張語彤',
+      '黃柏勳', '吳欣怡', '劉冠廷', '蔡雨潔', '楊子謙',
+      '許庭瑄', '鄭凱文', '謝宛庭', '洪睿哲', '郭心瑜',
+      '曾彥廷', '邱雅涵', '何俊佑', '羅以柔', '蘇哲宇'
     ]
   },
   {
     id: 'class_2',
-    name: '三年二班 (範例)',
+    name: '星河班（範例）',
     students: [
-      '陳大為', '林冠宇', '張雨軒', '李芷葳', '黃柏睿',
-      '曾子晴', '徐哲維', '徐若瑄', '江宏傑', '福原愛',
-      '王力宏', '陶喆', '周華健', '張惠妹', '五月天'
+      '周映彤', '徐皓宇', '葉思妤', '潘昱辰', '朱芷晴',
+      '江祐翔', '戴佳蓉', '彭奕凡', '范庭羽', '姚冠宇',
+      '宋可欣', '杜柏翰', '廖語芯', '魏子翔', '梁心妍'
     ]
   }
 ];
+
+const LEGACY_SAMPLE_NAMES = {
+  class_1: ['王小明', '李小華', '張大同', '陳美麗', '黃春嬌', '趙鐵雄', '錢進步', '孫悟空', '周杰倫', '蔡依林', '吳克群', '楊丞琳', '羅志祥', '蕭敬騰', '林俊傑', '鄧紫棋', '周興哲', '田馥甄', '許光漢', '柯佳嬿'],
+  class_2: ['陳大為', '林冠宇', '張雨軒', '李芷葳', '黃柏睿', '曾子晴', '徐哲維', '徐若瑄', '江宏傑', '福原愛', '王力宏', '陶喆', '周華健', '張惠妹', '五月天']
+};
+
+function migrateLegacySampleClasses() {
+  let changed = false;
+  ['class_1', 'class_2'].forEach(id => {
+    const existing = appState.classes.find(classInfo => classInfo.id === id);
+    const replacement = DEFAULT_CLASSES.find(classInfo => classInfo.id === id);
+    if (!existing || !replacement) return;
+    const legacyStudents = LEGACY_SAMPLE_NAMES[id];
+    if (JSON.stringify(existing.students) === JSON.stringify(legacyStudents)) {
+      existing.name = replacement.name;
+      existing.students = [...replacement.students];
+      changed = true;
+    }
+  });
+  if (changed) saveClassesToStorage();
+}
 
 function initLocalStorageData() {
   // 1. Classes List
@@ -181,6 +280,7 @@ function initLocalStorageData() {
       localStorage.setItem(STORAGE_KEYS.CLASSES, JSON.stringify(appState.classes));
     }
   }
+  migrateLegacySampleClasses();
   
   // 2. Active Class ID
   try {
@@ -213,7 +313,7 @@ function saveClassesToStorage() {
 // UI State Updates
 function updateHeaderClassDropdown() {
   const select = document.getElementById('header-class-select');
-  select.innerHTML = '';
+  select.replaceChildren();
   appState.classes.forEach(cls => {
     const opt = document.createElement('option');
     opt.value = cls.id;
@@ -242,17 +342,24 @@ function toggleGlobalSound() {
 
 function updateSoundButtonUI() {
   const btn = document.getElementById('sound-toggle-btn');
+  const icon = document.createElement('i');
+  icon.setAttribute('aria-hidden', 'true');
   if (appState.soundEnabled) {
-    btn.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
+    icon.className = 'fa-solid fa-volume-high';
     btn.style.color = 'var(--accent-secondary)';
     btn.style.border = '1px solid var(--accent-secondary)';
     btn.style.boxShadow = 'var(--shadow-neon)';
+    btn.setAttribute('aria-label', '關閉操作音效');
+    btn.setAttribute('aria-pressed', 'true');
   } else {
-    btn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
+    icon.className = 'fa-solid fa-volume-xmark';
     btn.style.color = 'var(--text-muted)';
     btn.style.border = '1px solid var(--border-color)';
     btn.style.boxShadow = 'none';
+    btn.setAttribute('aria-label', '開啟操作音效');
+    btn.setAttribute('aria-pressed', 'false');
   }
+  btn.replaceChildren(icon);
 }
 
 // Router & View Switcher
@@ -271,24 +378,31 @@ function switchView(viewName) {
   
   // Update UI Sidebar Active state
   document.querySelectorAll('#sidebar .nav-links li').forEach(li => {
+    const button = li.querySelector('.nav-button');
     if (li.getAttribute('data-view') === viewName) {
       li.classList.add('active');
+      button?.setAttribute('aria-current', 'page');
     } else {
       li.classList.remove('active');
+      button?.removeAttribute('aria-current');
     }
   });
   
   // Update Title text
-  document.getElementById('current-view-title').innerText = viewTitleMap[viewName] || 'ClassHub';
+  document.getElementById('current-view-title').textContent = viewTitleMap[viewName] || '班級工具箱';
   
   // Switch Visible Container
   document.querySelectorAll('main .container').forEach(c => {
     if (c.id === `view-${viewName}`) {
       c.classList.add('active');
+      c.setAttribute('aria-hidden', 'false');
     } else {
       c.classList.remove('active');
+      c.setAttribute('aria-hidden', 'true');
     }
   });
+
+  updateHeaderClassContext(viewName);
 
   // Mobile navigation close
   const sidebar = document.getElementById('sidebar');
@@ -296,6 +410,8 @@ function switchView(viewName) {
   if (sidebar.classList.contains('active')) {
     sidebar.classList.remove('active');
     ham.classList.remove('active');
+    ham.setAttribute('aria-expanded', 'false');
+    ham.setAttribute('aria-label', '開啟功能選單');
   }
   
   // Trigger sub-module specific initialization when navigated to
@@ -309,6 +425,64 @@ function toggleSidebar() {
   const ham = document.getElementById('hamburger-toggle');
   sidebar.classList.toggle('active');
   ham.classList.toggle('active');
+  const isOpen = sidebar.classList.contains('active');
+  ham.setAttribute('aria-expanded', String(isOpen));
+  ham.setAttribute('aria-label', isOpen ? '關閉功能選單' : '開啟功能選單');
+}
+
+function updateHeaderClassContext(viewName) {
+  const classContext = document.getElementById('header-class-context');
+  const header = document.querySelector('header');
+  const shouldShow = CLASS_SCOPED_VIEWS.has(viewName);
+  classContext.hidden = !shouldShow;
+  header.classList.toggle('no-class-context', !shouldShow);
+}
+
+let appToastTimeout = null;
+
+function showAppToast(message, duration = 3000) {
+  const toast = document.getElementById('app-toast');
+  if (!toast) return;
+  window.clearTimeout(appToastTimeout);
+  toast.textContent = message;
+  toast.hidden = false;
+  appToastTimeout = window.setTimeout(() => {
+    toast.hidden = true;
+  }, duration);
+}
+
+async function downloadElementAsImage(element, fileName) {
+  if (!element || typeof window.html2canvas !== 'function') {
+    await showCustomModal('下載失敗', '圖片匯出元件尚未載入，請重新整理後再試一次。');
+    return;
+  }
+
+  try {
+    showAppToast('正在產生圖片…', 30000);
+    const canvas = await window.html2canvas(element, {
+      backgroundColor: '#0a081c',
+      scale: Math.min(2, window.devicePixelRatio || 1),
+      useCORS: true
+    });
+    const imageBlob = await new Promise((resolve, reject) => {
+      canvas.toBlob(blob => {
+        if (blob) resolve(blob);
+        else reject(new Error('無法建立圖片檔案'));
+      }, 'image/png');
+    });
+    const objectUrl = URL.createObjectURL(imageBlob);
+    const link = document.createElement('a');
+    link.download = fileName;
+    link.href = objectUrl;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    showAppToast('圖片已開始下載');
+  } catch (error) {
+    console.error('圖片下載失敗', error);
+    await showCustomModal('下載失敗', '無法產生圖片，請稍後再試。');
+  }
 }
 
 // Get students of the currently active class
@@ -356,6 +530,12 @@ document.addEventListener('DOMContentLoaded', () => {
   initLocalStorageData();
   updateHeaderClassDropdown();
   updateSoundButtonUI();
+  updateHeaderClassContext(appState.currentView);
+  document.addEventListener('keydown', handleModalKeyboard);
+  document.querySelectorAll('main .container').forEach(container => {
+    container.setAttribute('aria-hidden', String(!container.classList.contains('active')));
+  });
+  document.querySelector('#sidebar .nav-item.active .nav-button')?.setAttribute('aria-current', 'page');
   
   // Allow sound initialization after user interaction
   document.body.addEventListener('click', () => {
