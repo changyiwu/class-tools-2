@@ -513,11 +513,14 @@ textarea:focus-visible,
   flex-direction: column;
   align-items: center;
   position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   transition: transform 0.1s ease;
 }
 
 .slot-item {
+  flex: 0 0 120px;
   height: 120px;
   line-height: 120px;
   text-align: center;
@@ -533,12 +536,16 @@ textarea:focus-visible,
 .cards-container {
   display: flex;
   flex-wrap: wrap;
+  align-content: flex-start;
   gap: 16px;
   justify-content: center;
+  width: 100%;
+  height: 100%;
   padding: 20px;
   max-width: 100%;
+  max-height: 100%;
   overflow-y: auto;
-  max-height: 420px;
+  scroll-padding-block: 20px;
 }
 
 .flip-card {
