@@ -293,8 +293,8 @@ select option:hover {
 
 .select-wrapper::after {
   content: '\f078';
-  font-family: 'Font Awesome 6 Free';
-  font-weight: 900;
+  /* 用 Font Awesome 自己定義的變數，升版時字型名稱會跟著換，不必手動改版號 */
+  font: var(--fa-font-solid, 900 1em/1 'Font Awesome 7 Free');
   position: absolute;
   right: 16px;
   top: 50%;
