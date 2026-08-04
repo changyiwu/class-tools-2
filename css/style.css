@@ -6,6 +6,8 @@
   --bg-dark: #0a081c;
   --bg-card: rgba(255, 255, 255, 0.05);
   --bg-card-hover: rgba(255, 255, 255, 0.1);
+  --bg-popup: #171334;        /* 原生下拉選單清單用的不透明底色 */
+  --bg-popup-hover: #241d4d;
   --border-color: rgba(255, 255, 255, 0.08);
   --border-glow: rgba(255, 255, 255, 0.2);
   
@@ -38,6 +40,9 @@
   --transition-fast: 0.15s ease;
   --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --sidebar-width: 260px;
+
+  /* 讓瀏覽器以深色渲染原生元件（下拉清單、捲軸、日期選擇器） */
+  color-scheme: dark;
 }
 
 /* Base resets & layout */
@@ -270,6 +275,20 @@ select {
 select:focus {
   border-color: var(--accent-secondary);
   box-shadow: var(--shadow-neon);
+}
+
+/* 展開後的原生清單：select 的底色是半透明白，
+   會被瀏覽器合成成接近全白，導致淺色文字看不見，這裡改用不透明深色 */
+select option,
+select optgroup {
+  background-color: var(--bg-popup);
+  color: var(--text-main);
+}
+
+select option:checked,
+select option:hover {
+  background-color: var(--bg-popup-hover);
+  color: var(--text-main);
 }
 
 .select-wrapper::after {
