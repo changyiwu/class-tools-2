@@ -667,29 +667,6 @@ textarea:focus-visible,
   animation: pulse 1.5s infinite;
 }
 
-.winner-score-actions {
-  flex-shrink: 0;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: 6px 10px;
-  width: min(420px, 94%);
-  margin-bottom: 12px;
-  padding: 10px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.winner-score-actions select {
-  min-width: 0;
-}
-
-.winner-score-actions .btn {
-  grid-column: 1 / -1;
-  justify-content: center;
-}
-
 .winner-overlay > .btn {
   flex-shrink: 0;
 }
@@ -2002,15 +1979,6 @@ textarea.input-field {
 
   .scoreboard-controls-top > div {
     justify-content: flex-start;
-  }
-
-  .winner-score-actions {
-    grid-template-columns: auto minmax(0, 1fr);
-    width: min(320px, 100%);
-  }
-
-  .winner-score-actions .btn {
-    grid-column: 1 / -1;
   }
 
   .result-actions {

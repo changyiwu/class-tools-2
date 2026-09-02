@@ -532,8 +532,6 @@ function finishDraw() {
   
   // Show Winner Overlay
   document.getElementById('winner-name-lbl').innerText = winner.name;
-  document.querySelector('.winner-title').textContent = '🎉 恭喜中籤者 🎉';
-  populateWinnerScoreControls();
   document.getElementById('winner-display').style.display = 'flex';
   
   // Add to history list
@@ -558,29 +556,6 @@ function finishDraw() {
   
   raffleState.isDrawing = false;
   saveRaffleState();
-}
-
-function populateWinnerScoreControls() {
-  const actions = document.getElementById('winner-score-actions');
-  const teamSelect = document.getElementById('winner-score-team-select');
-  const teams = typeof getScoreboardTeams === 'function' ? getScoreboardTeams() : [];
-  teamSelect.replaceChildren();
-  actions.hidden = teams.length === 0;
-  teams.forEach(team => {
-    const option = document.createElement('option');
-    option.value = team.id;
-    option.textContent = team.name;
-    teamSelect.appendChild(option);
-  });
-}
-
-function awardWinnerScore() {
-  const teamId = document.getElementById('winner-score-team-select').value;
-  const amount = Number.parseInt(document.getElementById('winner-score-amount-select').value, 10);
-  if (!teamId || !Number.isFinite(amount) || !raffleState.lastWinner) return;
-  const team = getScoreboardTeams().find(item => item.id === teamId);
-  adjustTeamScore(teamId, amount, `抽中 ${raffleState.lastWinner.name}`);
-  document.querySelector('.winner-title').textContent = `已替${team?.name || '小組'}加 ${amount} 分`;
 }
 
 function closeWinnerOverlay() {
