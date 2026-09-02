@@ -84,6 +84,7 @@ class-tools-2/
 - 版面需同時適配投影幕、筆記型電腦與手機
 - **計分板資料是全域活動資料**；班級選擇器只顯示於抽籤、分組與座位表三個工具
 - 分組與座位表的圖片匯出使用 HTML2Canvas，產圖期間會顯示狀態提示
+- **品牌標誌與 favicon 一律手寫 SVG，不用生圖技能**：`.brand-logo` 顯示 40px、分頁圖標 16px，兩端都要清楚，而點陣圖縮小後糊掉、也吃不準 CSS 變數的色票，微調只能整張重生（實測 96.2 KB → 3.6 KB）。發光用 `radialGradient` 疊底，不要用 `feGaussianBlur`。標誌放 `public/assets/`，Vite 會原樣複製到 `dist/assets/`，改完跑一次 `npm run build` 確認
 
 ## 部署
 

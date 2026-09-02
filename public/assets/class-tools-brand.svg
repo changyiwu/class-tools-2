@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="班級工具箱">
+  <defs>
+    <radialGradient id="ctBg" cx="50%" cy="44%" r="76%">
+      <stop offset="0" stop-color="#0a1150"/>
+      <stop offset=".6" stop-color="#030832"/>
+      <stop offset="1" stop-color="#01041e"/>
+    </radialGradient>
+    <linearGradient id="ctLid" x1="0" y1="0" x2=".3" y2="1">
+      <stop offset="0" stop-color="#60a5fa"/>
+      <stop offset=".5" stop-color="#2563eb"/>
+      <stop offset="1" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="ctBody" x1="0" y1="0" x2=".2" y2="1">
+      <stop offset="0" stop-color="#3b82f6"/>
+      <stop offset=".55" stop-color="#2547d8"/>
+      <stop offset="1" stop-color="#7c3aed"/>
+    </linearGradient>
+    <linearGradient id="ctWood" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#fde68a"/>
+      <stop offset=".45" stop-color="#fbbf24"/>
+      <stop offset="1" stop-color="#d97706"/>
+    </linearGradient>
+    <linearGradient id="ctWatch" x1="0" y1="0" x2=".4" y2="1">
+      <stop offset="0" stop-color="#3b4796"/>
+      <stop offset="1" stop-color="#1b2050"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="256" height="256" fill="url(#ctBg)"/>
+
+  <!-- 提把 -->
+  <path d="M100 74L100 54Q100 44 110 44L146 44Q156 44 156 54L156 74" fill="none" stroke="#1e40af" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M100 74L100 54Q100 44 110 44L146 44Q156 44 156 54L156 74" fill="none" stroke="url(#ctLid)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- 打開的上蓋 -->
+  <path d="M58 74Q58 64 68 64L188 64Q198 64 198 74L204 150L52 150Z" fill="url(#ctLid)"/>
+  <path d="M58 74Q58 64 68 64L188 64Q198 64 198 74L199 82L57 82Z" fill="#93c5fd" opacity=".45"/>
+  <path d="M68 78L188 78L193 144L63 144Z" fill="#0b1233"/>
+
+  <!-- 鉛筆 -->
+  <g transform="rotate(-31 94 122)">
+    <path d="M94 70L104 96L84 96Z" fill="#d9c49a"/>
+    <path d="M94 70L99.5 84L88.5 84Z" fill="#4b5563"/>
+    <rect x="84" y="94" width="20" height="60" fill="url(#ctWood)"/>
+    <rect x="84" y="152" width="20" height="11" fill="#3b82f6"/>
+    <rect x="84" y="161" width="20" height="16" rx="5" fill="#ef4444"/>
+  </g>
+
+  <!-- 碼錶 -->
+  <g>
+    <rect x="153" y="86" width="19" height="13" rx="4" fill="#ef4444"/>
+    <rect x="158" y="96" width="9" height="8" fill="#dc2626"/>
+    <rect x="181" y="99" width="15" height="13" rx="4" fill="#ef4444" transform="rotate(40 188 105)"/>
+    <circle cx="162" cy="134" r="37" fill="#6366f1"/>
+    <circle cx="162" cy="134" r="31" fill="url(#ctWatch)"/>
+    <g stroke="#e2e8f0" stroke-width="3" stroke-linecap="round" opacity=".85">
+      <path d="M162 108L162 114"/><path d="M188 134L182 134"/>
+      <path d="M162 160L162 154"/><path d="M136 134L142 134"/>
+      <path d="M180 116L176 120"/><path d="M180 152L176 148"/>
+      <path d="M144 152L148 148"/><path d="M144 116L148 120"/>
+    </g>
+    <path d="M162 134L180 148" stroke="#ef4444" stroke-width="4.5" stroke-linecap="round"/>
+    <circle cx="162" cy="134" r="4" fill="#f8fafc"/>
+  </g>
+
+  <!-- 箱體前板 -->
+  <path d="M44 150L212 150Q220 150 219 158L214 206Q213 216 203 216L53 216Q43 216 42 206L37 158Q36 150 44 150Z" fill="url(#ctBody)"/>
+  <path d="M44 150L212 150Q220 150 219 158L218 164L38 164L37 158Q36 150 44 150Z" fill="#93c5fd" opacity=".38"/>
+  <!-- 鎖扣 -->
+  <rect x="112" y="158" width="34" height="26" rx="7" fill="#a855f7"/>
+  <rect x="119" y="182" width="20" height="16" rx="5" fill="#7c3aed"/>
+</svg>
