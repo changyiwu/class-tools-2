@@ -4,7 +4,9 @@ let raffleState = {
   pool: [],            // Current eligible students remaining
   history: [],         // Drawn students: { name, time }
   isDrawing: false,
-  lastWinner: null,
+  drawCount: 1,       // 一次要抽出的人數
+  lastWinners: [],    // 本次中籤者：{ index, name }
+  pendingPicks: [],   // 神秘翻牌模式已翻開、尚未成局的卡牌
   
   // Wheel specific variables
   wheelAngle: 0,
@@ -28,6 +30,15 @@ document.addEventListener('DOMContentLoaded', () => {
   loadRaffleState(raffleActiveClassId);
 
   document.getElementById('raffle-exclude-checkbox').addEventListener('change', saveRaffleState);
+
+  const drawCountInput = document.getElementById('raffle-draw-count');
+  drawCountInput.addEventListener('change', () => {
+    raffleState.drawCount = clampDrawCount(drawCountInput.value);
+    drawCountInput.value = raffleState.drawCount;
+    resetCardPicks();
+    updateRaffleHint();
+    saveRaffleState();
+  });
 
   registerClassChangeCallback((classId) => {
     if (classId === raffleActiveClassId) {
@@ -78,7 +89,10 @@ function loadRaffleState(classId) {
   }
 
   raffleState.isDrawing = false;
-  raffleState.lastWinner = null;
+  raffleState.lastWinners = [];
+  raffleState.pendingPicks = [];
+  raffleState.drawCount = Number.parseInt(saved?.drawCount, 10) || 1;
+  updateDrawCountLimit();
   document.getElementById('raffle-exclude-checkbox').checked = Boolean(saved?.exclude);
   document.querySelectorAll('.raffle-mode-btn[data-mode]').forEach(button => {
     button.classList.toggle('active', button.dataset.mode === raffleState.currentMode);
@@ -89,6 +103,7 @@ function loadRaffleState(classId) {
   rebuildWheelColors();
   updateHistoryUI();
   renderRaffleArena();
+  updateRaffleHint();
 }
 
 function saveRaffleState(classId = raffleActiveClassId) {
@@ -97,8 +112,55 @@ function saveRaffleState(classId = raffleActiveClassId) {
     currentMode: raffleState.currentMode,
     pool: raffleState.pool,
     history: raffleState.history,
+    drawCount: raffleState.drawCount,
     exclude: document.getElementById('raffle-exclude-checkbox')?.checked || false
   });
+}
+
+function clampDrawCount(value) {
+  const max = Math.max(1, raffleState.pool.length);
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return 1;
+  return Math.min(Math.max(parsed, 1), max);
+}
+
+function updateDrawCountLimit() {
+  const input = document.getElementById('raffle-draw-count');
+  if (!input) return;
+  input.max = Math.max(1, raffleState.pool.length);
+  raffleState.drawCount = clampDrawCount(raffleState.drawCount);
+  input.value = raffleState.drawCount;
+}
+
+function getDrawCount() {
+  const input = document.getElementById('raffle-draw-count');
+  raffleState.drawCount = clampDrawCount(input ? input.value : raffleState.drawCount);
+  if (input) input.value = raffleState.drawCount;
+  return raffleState.drawCount;
+}
+
+function resetCardPicks() {
+  raffleState.pendingPicks = [];
+  document.querySelectorAll('#arena-cards .flip-card.flipped').forEach(card => {
+    card.classList.remove('flipped');
+  });
+}
+
+function updateRaffleHint() {
+  const hint = document.getElementById('raffle-hint');
+  if (!hint) return;
+  
+  if (raffleState.currentMode !== 'cards' || raffleState.pool.length === 0) {
+    hint.hidden = true;
+    hint.textContent = '';
+    return;
+  }
+  
+  const target = raffleState.drawCount;
+  hint.hidden = false;
+  hint.textContent = target > 1
+    ? `神秘翻牌：請翻開 ${target} 張卡牌（還需 ${Math.max(0, target - raffleState.pendingPicks.length)} 張）`
+    : '神秘翻牌：請點擊任一張問號卡牌翻開中籤者';
 }
 
 function rebuildWheelColors() {
@@ -126,16 +188,21 @@ function setRaffleMode(mode) {
   document.getElementById('arena-slot').style.display = mode === 'slot' ? 'flex' : 'none';
   document.getElementById('arena-cards').style.display = mode === 'cards' ? 'flex' : 'none';
   
+  raffleState.pendingPicks = [];
   renderRaffleArena();
+  updateRaffleHint();
   saveRaffleState();
 }
 
 function resetRafflePool() {
   const students = getActiveStudents();
   raffleState.pool = [...students];
+  raffleState.pendingPicks = [];
   rebuildWheelColors();
+  updateDrawCountLimit();
   saveRaffleState();
   renderRaffleArena();
+  updateRaffleHint();
 }
 
 function renderRaffleArena() {
@@ -375,10 +442,10 @@ function spinSlot() {
       const winnerName = scrollItems[spins - 1];
       const winnerIndex = pool.indexOf(winnerName);
       
-      raffleState.lastWinner = {
+      raffleState.lastWinners = [{
         index: winnerIndex,
         name: winnerName
-      };
+      }];
       
       finishDraw();
     }
@@ -432,17 +499,22 @@ function setupCards() {
 function selectCard(cardElement, index, name) {
   if (raffleState.isDrawing || cardElement.classList.contains('flipped')) return;
   
+  const target = getDrawCount();
+  cardElement.classList.add('flipped');
+  raffleState.pendingPicks.push({ index: index, name: name });
+  
+  // 還沒翻滿指定人數，繼續等待下一次翻牌
+  if (raffleState.pendingPicks.length < target) {
+    playSynthSound('tick');
+    updateRaffleHint();
+    return;
+  }
+  
   // Set drawing locks
   raffleState.isDrawing = true;
   document.getElementById('btn-spin').disabled = true;
-  
-  cardElement.classList.add('flipped');
-  
-  // Set winner details
-  raffleState.lastWinner = {
-    index: index,
-    name: name
-  };
+  raffleState.lastWinners = raffleState.pendingPicks.slice();
+  updateRaffleHint();
   
   setTimeout(() => {
     finishDraw();
@@ -478,6 +550,11 @@ function startRaffleDraw() {
 }
 
 function animateCardShuffle() {
+  const target = getDrawCount();
+  setupCards();
+  raffleState.pendingPicks = [];
+  updateRaffleHint();
+  
   const cards = document.querySelectorAll('.flip-card');
   if (cards.length === 0) return;
   
@@ -499,27 +576,66 @@ function animateCardShuffle() {
     });
     
     raffleState.isDrawing = false;
-    showCustomModal('卡牌洗牌完成', '請點擊畫面上任意一張問號卡牌來翻開中籤學生！');
+    document.getElementById('btn-spin').disabled = false;
+    showCustomModal('卡牌洗牌完成', target > 1
+      ? `請點擊畫面上任意 ${target} 張問號卡牌來翻開中籤學生！`
+      : '請點擊畫面上任意一張問號卡牌來翻開中籤學生！');
   }, 400);
 }
 
-function finishDraw() {
-  let winner = null;
-  if (raffleState.currentMode === 'wheel') {
-    winner = getWheelWinner();
-  } else {
-    winner = raffleState.lastWinner;
+// 以動畫抽出的第一位為主，其餘從剩下的名單隨機補齊到指定人數（同一次抽籤不重複）
+function collectWinners(primary) {
+  const target = getDrawCount();
+  const winners = [];
+  const usedIndexes = new Set();
+  
+  const addWinner = (entry) => {
+    if (!entry || usedIndexes.has(entry.index)) return;
+    usedIndexes.add(entry.index);
+    winners.push({ index: entry.index, name: entry.name });
+  };
+  
+  (Array.isArray(primary) ? primary : [primary]).forEach(addWinner);
+  
+  const candidates = raffleState.pool
+    .map((name, index) => ({ index, name }))
+    .filter(item => !usedIndexes.has(item.index));
+  
+  while (winners.length < target && candidates.length > 0) {
+    const picked = candidates.splice(Math.floor(Math.random() * candidates.length), 1)[0];
+    addWinner(picked);
   }
   
-  if (!winner) {
+  return winners;
+}
+
+function renderWinnerNames(winners) {
+  const container = document.getElementById('winner-names');
+  container.replaceChildren();
+  container.classList.toggle('is-multi', winners.length > 1);
+  
+  winners.forEach(winner => {
+    const el = document.createElement('div');
+    el.className = 'winner-name';
+    el.textContent = winner.name;
+    container.appendChild(el);
+  });
+}
+
+function finishDraw() {
+  const primary = raffleState.currentMode === 'wheel' ? getWheelWinner() : raffleState.lastWinners;
+  const winners = collectWinners(primary);
+  
+  if (winners.length === 0) {
     raffleState.isDrawing = false;
+    raffleState.pendingPicks = [];
     document.getElementById('btn-spin').disabled = false;
     return;
   }
   
   // Play major winning synthesis chord
   playSynthSound('win');
-  raffleState.lastWinner = { index: winner.index, name: winner.name };
+  raffleState.lastWinners = winners;
   
   // Add Confetti explosion!
   if (window.confetti) {
@@ -531,39 +647,53 @@ function finishDraw() {
   }
   
   // Show Winner Overlay
-  document.getElementById('winner-name-lbl').innerText = winner.name;
+  document.querySelector('.winner-title').textContent = winners.length > 1
+    ? `🎉 恭喜 ${winners.length} 位中籤者 🎉`
+    : '🎉 恭喜中籤者 🎉';
+  renderWinnerNames(winners);
   document.getElementById('winner-display').style.display = 'flex';
   
-  // Add to history list
+  // Add to history list（先抽到的排在最上面）
   const now = new Date();
   const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
   
-  raffleState.history.unshift({
-    name: winner.name,
-    time: timeStr
+  winners.slice().reverse().forEach(winner => {
+    raffleState.history.unshift({
+      name: winner.name,
+      time: timeStr
+    });
   });
   updateHistoryUI();
   
-  // Exclude option check
+  // Exclude option check（由大到小刪除，避免索引位移）
   const excludeChecked = document.getElementById('raffle-exclude-checkbox').checked;
   if (excludeChecked) {
-    raffleState.pool.splice(winner.index, 1);
-    // Remove matching index from HSL colors list to maintain alignment
-    if (raffleState.wheelColors.length > 0) {
-      raffleState.wheelColors.splice(winner.index, 1);
-    }
+    winners
+      .map(winner => winner.index)
+      .sort((a, b) => b - a)
+      .forEach(index => {
+        raffleState.pool.splice(index, 1);
+        // Remove matching index from HSL colors list to maintain alignment
+        if (raffleState.wheelColors.length > 0) {
+          raffleState.wheelColors.splice(index, 1);
+        }
+      });
+    updateDrawCountLimit();
   }
   
   raffleState.isDrawing = false;
+  raffleState.pendingPicks = [];
   saveRaffleState();
 }
 
 function closeWinnerOverlay() {
   document.getElementById('winner-display').style.display = 'none';
   document.getElementById('btn-spin').disabled = false;
+  raffleState.pendingPicks = [];
   
   // Reload arena layout (updates wheel slices, or resets card flip)
   renderRaffleArena();
+  updateRaffleHint();
 }
 
 function updateHistoryUI() {

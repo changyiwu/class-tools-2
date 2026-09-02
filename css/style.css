@@ -619,6 +619,33 @@ textarea:focus-visible,
 }
 
 /* Winner display overlay */
+.raffle-options {
+  flex-wrap: wrap;
+}
+
+.raffle-count-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+  user-select: none;
+}
+
+.raffle-count-control .input-field {
+  width: 64px;
+  padding: 6px 8px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.raffle-hint {
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
 .winner-overlay {
   position: absolute;
   inset: 0;
@@ -648,6 +675,22 @@ textarea:focus-visible,
   margin-bottom: 8px;
   text-align: center;
   text-transform: uppercase;
+}
+
+.winner-names {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0 24px;
+  max-width: 100%;
+}
+
+.winner-names.is-multi .winner-name {
+  font-size: clamp(20px, 3vw, 34px);
+  margin-bottom: 6px;
+  animation: none;
 }
 
 .winner-name {
@@ -1941,6 +1984,10 @@ textarea.input-field {
   .raffle-mode-btn {
     flex: 1 1 100%;
     justify-content: center;
+    min-height: 44px;
+  }
+
+  .raffle-count-control .input-field {
     min-height: 44px;
   }
 

@@ -126,7 +126,12 @@
               </button>
             </div>
             
-            <div style="display: flex; align-items: center; gap: 16px;">
+            <div class="raffle-options" style="display: flex; align-items: center; gap: 16px;">
+              <label class="raffle-count-control" for="raffle-draw-count">
+                <span>一次抽</span>
+                <input type="number" id="raffle-draw-count" class="input-field" value="1" min="1" max="1" step="1" inputmode="numeric">
+                <span>位</span>
+              </label>
               <label style="font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
                 <input type="checkbox" id="raffle-exclude-checkbox" style="accent-color: var(--accent-secondary);">
                 <span>不重複抽籤 (排除已中)</span>
@@ -157,10 +162,14 @@
             <!-- Winner Modal Display -->
             <div id="winner-display" class="winner-overlay" style="display: none;">
               <div class="winner-title">🎉 恭喜中籤者 🎉</div>
-              <div class="winner-name" id="winner-name-lbl">張三</div>
+              <div class="winner-names" id="winner-names">
+                <div class="winner-name">張三</div>
+              </div>
               <button type="button" class="btn btn-primary" onclick="closeWinnerOverlay()">完成</button>
             </div>
           </div>
+          
+          <p id="raffle-hint" class="raffle-hint" role="status" hidden></p>
           
           <div style="display: flex; justify-content: center; gap: 16px;">
             <button id="btn-spin" class="btn btn-primary" style="padding: 14px 40px; font-size: 16px;" onclick="startRaffleDraw()">
