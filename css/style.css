@@ -714,7 +714,8 @@ textarea:focus-visible,
   align-items: center;
   justify-content: center;
   gap: 0 24px;
-  max-width: 100%;
+  /* 需要滿版：否則子項的 max-width 會退回自己的內容寬度，短名字也被切成「…」 */
+  width: 100%;
 }
 
 .winner-names.is-multi .winner-name {
