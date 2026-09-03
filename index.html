@@ -113,7 +113,7 @@
       <div class="raffle-layout">
         <!-- Main Raffle Area -->
         <div class="glass-card" style="display: flex; flex-direction: column;">
-          <div class="raffle-header-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <div class="raffle-header-row">
             <div class="raffle-modes">
               <button class="raffle-mode-btn active" data-mode="wheel" onclick="setRaffleMode('wheel')">
                 <i class="fa-solid fa-circle-dot"></i> 幸運大轉盤
@@ -126,14 +126,14 @@
               </button>
             </div>
             
-            <div class="raffle-options" style="display: flex; align-items: center; gap: 16px;">
+            <div class="raffle-options">
               <label class="raffle-count-control" for="raffle-draw-count">
                 <span>一次抽</span>
                 <input type="number" id="raffle-draw-count" class="input-field" value="1" min="1" max="1" step="1" inputmode="numeric">
                 <span>位</span>
               </label>
-              <label style="font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
-                <input type="checkbox" id="raffle-exclude-checkbox" style="accent-color: var(--accent-secondary);">
+              <label class="raffle-exclude-control">
+                <input type="checkbox" id="raffle-exclude-checkbox">
                 <span>不重複抽籤 (排除已中)</span>
               </label>
             </div>

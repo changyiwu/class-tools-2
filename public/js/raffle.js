@@ -11,8 +11,14 @@ let raffleState = {
   // Wheel specific variables
   wheelAngle: 0,
   wheelSpeed: 0,
-  wheelColors: []
+  wheelColors: [],
+  wheelSlices: [],    // 轉盤格子對應的名單索引（亂數排列）
+  sweepPicked: []     // 指針已掃到的格子位置，畫面上高亮用
 };
+
+// 多位中籤時，指針每掃一格的動畫與停留時間
+const SWEEP_STEP_MS = 320;
+const SWEEP_HOLD_MS = 420;
 
 let raffleActiveClassId = '';
 
@@ -163,9 +169,21 @@ function updateRaffleHint() {
     : '神秘翻牌：請點擊任一張問號卡牌翻開中籤者';
 }
 
+function shuffleArray(items) {
+  const result = items.slice();
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
 function rebuildWheelColors() {
-  raffleState.wheelColors = raffleState.pool.map((_, index) => {
-    const hue = (index * (360 / Math.max(1, raffleState.pool.length))) % 360;
+  // 轉盤上的排列用亂數打散，指針連續掃過的格子才等同於隨機取樣
+  raffleState.wheelSlices = shuffleArray(raffleState.pool.map((_, index) => index));
+  raffleState.sweepPicked = [];
+  raffleState.wheelColors = raffleState.wheelSlices.map((_, index) => {
+    const hue = (index * (360 / Math.max(1, raffleState.wheelSlices.length))) % 360;
     return `hsl(${hue}, 75%, 60%)`;
   });
 }
@@ -233,7 +251,11 @@ function drawWheel() {
   const colorTextMain = getCssVariableColor('--text-main', '#f8fafc');
   const colorAccentSecondary = getCssVariableColor('--accent-secondary', '#06b6d4');
 
-  const len = raffleState.pool.length;
+  if (raffleState.wheelSlices.length !== raffleState.pool.length) {
+    rebuildWheelColors();
+  }
+  
+  const len = raffleState.wheelSlices.length;
   if (len === 0) {
     // Empty state
     wheelCtx.fillStyle = 'rgba(255,255,255,0.08)';
@@ -255,8 +277,13 @@ function drawWheel() {
   const arcSize = (Math.PI * 2) / len;
   
   // Draw slices
+  const sweeping = raffleState.sweepPicked.length > 0;
   for (let i = 0; i < len; i++) {
     const angle = raffleState.wheelAngle + i * arcSize;
+    const picked = raffleState.sweepPicked.includes(i);
+    
+    // 掃描中未中的格子淡出，讓已掃到的中籤格子跳出來
+    wheelCtx.globalAlpha = sweeping && !picked ? 0.3 : 1;
     wheelCtx.fillStyle = raffleState.wheelColors[i % raffleState.wheelColors.length];
     
     wheelCtx.beginPath();
@@ -266,8 +293,8 @@ function drawWheel() {
     wheelCtx.fill();
     
     // Draw divider lines
-    wheelCtx.strokeStyle = 'rgba(18, 22, 33, 0.4)';
-    wheelCtx.lineWidth = 1.5;
+    wheelCtx.strokeStyle = picked ? colorAccentSecondary : 'rgba(18, 22, 33, 0.4)';
+    wheelCtx.lineWidth = picked ? 4 : 1.5;
     wheelCtx.stroke();
     
     // Draw text labels
@@ -280,9 +307,10 @@ function drawWheel() {
     // Position text in the middle of slice
     wheelCtx.translate(cx, cy);
     wheelCtx.rotate(angle + arcSize / 2);
-    wheelCtx.fillText(raffleState.pool[i], radius - 25, 0);
+    wheelCtx.fillText(raffleState.pool[raffleState.wheelSlices[i]], radius - 25, 0);
     wheelCtx.restore();
   }
+  wheelCtx.globalAlpha = 1;
   
   // Draw center hub
   wheelCtx.fillStyle = '#1a1f2c';
@@ -306,6 +334,8 @@ function spinWheel() {
   
   // Start config
   raffleState.isDrawing = true;
+  raffleState.lastWinners = [];
+  raffleState.sweepPicked = [];
   document.getElementById('btn-spin').disabled = true;
   
   // Spin physics
@@ -334,16 +364,16 @@ function spinWheel() {
     } else {
       // Finished Spin
       cancelAnimationFrame(wheelAnimFrame);
-      finishDraw();
+      sweepWheelWinners();
     }
   }
   
   anim();
 }
 
-function getWheelWinner() {
-  const len = raffleState.pool.length;
-  if (len === 0) return null;
+function getPointerSlice() {
+  const len = raffleState.wheelSlices.length;
+  if (len === 0) return -1;
   
   const arcSize = (Math.PI * 2) / len;
   
@@ -354,11 +384,65 @@ function getWheelWinner() {
     normalizedAngle += Math.PI * 2;
   }
   
-  const winnerIndex = Math.floor(normalizedAngle / arcSize) % len;
-  return {
-    index: winnerIndex,
-    name: raffleState.pool[winnerIndex]
+  return Math.floor(normalizedAngle / arcSize) % len;
+}
+
+// 轉盤停下後，指針每再掃過一格就多算一位中籤者，每位停留一下下
+function sweepWheelWinners() {
+  const len = raffleState.wheelSlices.length;
+  const startSlice = getPointerSlice();
+  
+  if (len === 0 || startSlice < 0) {
+    raffleState.isDrawing = false;
+    document.getElementById('btn-spin').disabled = false;
+    return;
+  }
+  
+  const target = Math.min(getDrawCount(), len);
+  const arcSize = (Math.PI * 2) / len;
+  const winners = [];
+  raffleState.sweepPicked = [];
+  
+  // 轉盤持續往前轉時，指針落到的格子位置會往回一格
+  const revealAt = (order) => {
+    const slicePos = (startSlice - order + len) % len;
+    const poolIndex = raffleState.wheelSlices[slicePos];
+    raffleState.sweepPicked.push(slicePos);
+    winners.push({ index: poolIndex, name: raffleState.pool[poolIndex] });
+    drawWheel();
+    playSynthSound('tick');
   };
+  
+  const advance = (order) => {
+    if (order >= target) {
+      raffleState.lastWinners = winners;
+      finishDraw();
+      return;
+    }
+    
+    const from = raffleState.wheelAngle;
+    const start = performance.now();
+    
+    function step(timestamp) {
+      const t = Math.min((timestamp - start) / SWEEP_STEP_MS, 1);
+      raffleState.wheelAngle = from + arcSize * (1 - Math.pow(1 - t, 3));
+      drawWheel();
+      
+      if (t < 1) {
+        wheelAnimFrame = requestAnimationFrame(step);
+        return;
+      }
+      
+      raffleState.wheelAngle = from + arcSize;
+      revealAt(order);
+      setTimeout(() => advance(order + 1), SWEEP_HOLD_MS);
+    }
+    
+    wheelAnimFrame = requestAnimationFrame(step);
+  };
+  
+  revealAt(0);
+  setTimeout(() => advance(1), SWEEP_HOLD_MS);
 }
 
 // ==========================================
@@ -391,15 +475,21 @@ function spinSlot() {
   if (len === 0) return;
   
   raffleState.isDrawing = true;
+  raffleState.lastWinners = [];
   document.getElementById('btn-spin').disabled = true;
   
+  // 中籤者用亂數挑，並排在滾動條最後面，讓拉霸依序停在每一位身上
+  const target = Math.min(getDrawCount(), len);
+  const winners = shuffleArray(pool.map((name, index) => ({ index, name }))).slice(0, target);
+  
   // Generate random rolling path (around 30-40 elements scroll)
-  const spins = 30 + Math.floor(Math.random() * 20);
+  const spins = 30 + Math.floor(Math.random() * 20) + target;
   const scrollItems = [];
   
-  for (let i = 0; i < spins; i++) {
+  for (let i = 0; i < spins - target; i++) {
     scrollItems.push(pool[i % len]);
   }
+  winners.forEach(winner => scrollItems.push(winner.name));
   
   // Insert elements to DOM
   wrapper.replaceChildren();
@@ -410,9 +500,46 @@ function spinSlot() {
     wrapper.appendChild(el);
   });
   
+  const itemOffset = (order) => -(spins - target + order) * 120; // 120px height per item
+  
+  // 停在一位中籤者身上，停留一下下再滑到下一位
+  function holdWinner(order) {
+    playSynthSound('tick');
+    
+    if (order >= target - 1) {
+      raffleState.lastWinners = winners;
+      setTimeout(finishDraw, SWEEP_HOLD_MS);
+      return;
+    }
+    
+    setTimeout(() => slideToWinner(order + 1), SWEEP_HOLD_MS);
+  }
+  
+  function slideToWinner(order) {
+    const from = itemOffset(order - 1);
+    const to = itemOffset(order);
+    const start = performance.now();
+    
+    function slide(timestamp) {
+      const t = Math.min((timestamp - start) / SWEEP_STEP_MS, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+      wrapper.style.transform = `translateY(${from + (to - from) * eased}px)`;
+      
+      if (t < 1) {
+        requestAnimationFrame(slide);
+        return;
+      }
+      
+      wrapper.style.transform = `translateY(${to}px)`;
+      holdWinner(order);
+    }
+    
+    requestAnimationFrame(slide);
+  }
+  
   // Animate scrolling with custom easing in JS
   let currentY = 0;
-  const targetY = -(spins - 1) * 120; // 120px height per item
+  const targetY = itemOffset(0);
   let progress = 0;
   const duration = 4000; // 4s
   const start = performance.now();
@@ -438,16 +565,8 @@ function spinSlot() {
     if (t < 1) {
       requestAnimationFrame(step);
     } else {
-      // Find final item
-      const winnerName = scrollItems[spins - 1];
-      const winnerIndex = pool.indexOf(winnerName);
-      
-      raffleState.lastWinners = [{
-        index: winnerIndex,
-        name: winnerName
-      }];
-      
-      finishDraw();
+      wrapper.style.transform = `translateY(${targetY}px)`;
+      holdWinner(0);
     }
   }
   
@@ -553,6 +672,7 @@ function animateCardShuffle() {
   const target = getDrawCount();
   setupCards();
   raffleState.pendingPicks = [];
+  raffleState.lastWinners = [];
   updateRaffleHint();
   
   const cards = document.querySelectorAll('.flip-card');
@@ -623,8 +743,8 @@ function renderWinnerNames(winners) {
 }
 
 function finishDraw() {
-  const primary = raffleState.currentMode === 'wheel' ? getWheelWinner() : raffleState.lastWinners;
-  const winners = collectWinners(primary);
+  // 三種模式都已在動畫收尾時把中籤者寫進 lastWinners
+  const winners = collectWinners(raffleState.lastWinners);
   
   if (winners.length === 0) {
     raffleState.isDrawing = false;
@@ -673,11 +793,9 @@ function finishDraw() {
       .sort((a, b) => b - a)
       .forEach(index => {
         raffleState.pool.splice(index, 1);
-        // Remove matching index from HSL colors list to maintain alignment
-        if (raffleState.wheelColors.length > 0) {
-          raffleState.wheelColors.splice(index, 1);
-        }
       });
+    // 名單變了就重排轉盤格子與配色
+    rebuildWheelColors();
     updateDrawCountLimit();
   }
   
@@ -690,6 +808,7 @@ function closeWinnerOverlay() {
   document.getElementById('winner-display').style.display = 'none';
   document.getElementById('btn-spin').disabled = false;
   raffleState.pendingPicks = [];
+  raffleState.sweepPicked = [];
   
   // Reload arena layout (updates wheel slices, or resets card flip)
   renderRaffleArena();
