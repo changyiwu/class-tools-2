@@ -13,7 +13,7 @@
 ## 目標與路線圖
 
 - [x] 階段一：六大功能上線（抽籤、噪音監測、分組、座位表、計時器、計分板）
-- [x] 階段二：開發指南整合為跨 Agent `agents.md`，移除舊規則檔；Vite 正式 build 通過
+- [x] 階段二：開發指南整合為跨 Agent `AGENTS.md`，移除舊規則檔；Vite 正式 build 通過
 - [x] 階段三：確認 GitHub Pages 部署工作流成功
 - [x] 階段四：完成繁中品牌、跨工具串接、每班保存、行動版、無障礙與離線資源強化
 - [ ] 階段五：以實際裝置驗證麥克風噪音監測、列印與圖片下載
@@ -38,7 +38,7 @@ class-tools-2/
 ├─ dist/                 # build 產物
 ├─ package.json  package-lock.json
 ├─ README.md
-├─ agents.md             # 本檔：專案藍圖
+├─ AGENTS.md             # 本檔：專案藍圖
 ├─ handoff.md            # 交接檔（每次收工必更新）
 ├─ .github/              # GitHub Actions 部署工作流
 └─ .gitignore
@@ -48,7 +48,7 @@ class-tools-2/
 
 | 層級 | 平台 | 位置 | 讀取時機 |
 |------|------|------|---------|
-| L1 | 本地（GDrive） | `agents.md`＋`handoff.md` | 每個 session |
+| L1 | 本地（GDrive） | `AGENTS.md`＋`handoff.md` | 每個 session |
 | L2 | GitHub | https://github.com/changyiwu/class-tools-2 （公開） | 指定時 |
 | L3 | Obsidian | `class-tools-2/專案工作流程.md` | 有需要時 |
 
@@ -57,7 +57,7 @@ class-tools-2/
 | 檔案 | 時效 | 寫入方式 | 放什麼 |
 |------|------|---------|--------|
 | `handoff.md` | **只對下一個 session 有效**，過期即丟 | 每次收工整份重寫 | 做到哪、下一步、**這次**的暫時 workaround |
-| `agents.md`（本檔） | **長期有效**，每個 session 都適用 | 只有規則本身變了才改 | 目標、路線圖、常設規則、結構 |
+| `AGENTS.md`（本檔） | **長期有效**，每個 session 都適用 | 只有規則本身變了才改 | 目標、路線圖、常設規則、結構 |
 | Obsidian／`git log` | **歷史**：發生過什麼、為什麼 | 只增不刪 | 決策紀錄、踩坑完整版、逐次進度 |
 
 驗收標準：**`handoff.md` 整份刪掉，不應損失任何長期資訊**——會的話代表該升級進本檔卻沒升級。
